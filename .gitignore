@@ -3,4 +3,5 @@ server
 *.o
 
 # Certificates must be regenerated
+keys/
 *.pem
