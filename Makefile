@@ -19,6 +19,8 @@ commonlib_obj: commonlib/commonlib.c commonlib/commonlib.h
 net_wrapper.o: net_wrapper.c net_wrapper.h
 	gcc -c net_wrapper.c -o net_wrapper.o
 
+messages.o: messages.c message.h
+	gcc -c message.c -o messages.o
 
 clean:
 	rm -f client server *.o commonlib/commonlib.o
