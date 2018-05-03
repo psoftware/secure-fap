@@ -56,7 +56,7 @@ unsigned int readcontent(const char *filename, unsigned char** fcontent)
 
 
 
-void encrypt_antonio(int cl_sock)
+void encrypt_antonio(int cl_sock, const char *filename)
 {
 	EVP_PKEY* pubkeys[1];
 	if(!read_pub_key(pubkeys))
@@ -65,13 +65,17 @@ void encrypt_antonio(int cl_sock)
 		return;
 	}
 
-	char msg[] = "MERDA 123456789.";
+//	char msg[] = "MERDA 123456789.";
+	unsigned char *buffer_file;
+	// leggo l contenuto del file da inviare
+	unsigned int file_len = readcontent(filename,&buffer_file);
+
 	unsigned char* encrypted_keys[1];
 	int encrypted_keys_len[1];
 	encrypted_keys_len[0] = EVP_PKEY_size(pubkeys[0]);
 	encrypted_keys[0] = malloc(encrypted_keys_len[0]);
 
-	unsigned char* ciphertext = malloc(sizeof(msg) + 16);
+	unsigned char* ciphertext = malloc(file_len + 16);
 	int outlen, cipherlen;
 
 	EVP_CIPHER_CTX* ctx = malloc(sizeof(EVP_CIPHER_CTX));
@@ -83,7 +87,7 @@ void encrypt_antonio(int cl_sock)
 	if(evp_res == 0)
 		printf("EVP_SealInit Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
 
-	evp_res = EVP_SealUpdate(ctx, ciphertext, &outlen, (unsigned char*)msg, sizeof(msg));
+	evp_res = EVP_SealUpdate(ctx, ciphertext, &outlen, buffer_file, file_len);
 	if(evp_res == 0)
 		printf("EVP_SealUpdate Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
 
@@ -110,6 +114,7 @@ void encrypt_antonio(int cl_sock)
 
 	EVP_CIPHER_CTX_cleanup(ctx);
 	free(ctx);
+	free(buffer_file);
 }
 
 int main(int argc, char **argv) {
@@ -129,6 +134,6 @@ int main(int argc, char **argv) {
 	printf("Connessione riuscita!\n");
 
 	printf("Invio file...!\n");
-	encrypt_antonio(sock_client);
+	encrypt_antonio(sock_client, argv[1]);
 	printf("Invio file completato!\n");
 }
