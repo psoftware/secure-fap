@@ -4,18 +4,15 @@ void convert_to_network_order( void* msg )
 {
 	message_type* m_t = (message_type*)msg;
 	switch( *m_t ){
-		case WELCOME_MESS:
-		case PEER_SETS_NAME:
-		case REQ_LIST_OF_PEERS:
-		case REQ_CONN_TO_PEER:
-		case REQ_CONN_FROM_PEER:
-		case CONN_TO_PEER_ACCEPTED:
-		case DISCONNECT_GAME:
+		case CLIENT_HELLO:
+		case SERVER_HELLO:
+		case GENERIC_ERR:
+		case SERVER_QUIT:
 			((simple_mess*)msg)->t = htonl(((simple_mess*)msg)->t);
 			((simple_mess*)msg)->peer_id = htonl(((simple_mess*)msg)->peer_id);
 			break;
 		
-		case PEER_SETS_UDP_PORT:
+/*		case PEER_SETS_UDP_PORT:
 			((reg_set_udp_port*)msg)->t = htonl(((reg_set_udp_port*)msg)->t);
 			((reg_set_udp_port*)msg)->peer_id = htonl(((reg_set_udp_port*)msg)->peer_id);
 			((reg_set_udp_port*)msg)->udp_port = htons(((reg_set_udp_port*)msg)->udp_port);
@@ -47,7 +44,7 @@ void convert_to_network_order( void* msg )
 			((res_list_peers*)msg)->t = htonl(((res_list_peers*)msg)->t);
 			((res_list_peers*)msg)->n_peer = htonl(((res_list_peers*)msg)->n_peer);
 			break;
-
+*/
 		default:
 			break;
 	}
@@ -61,17 +58,14 @@ void convert_to_host_order( void* msg )
 	*m_t = ntohl(*m_t);
 
 	switch( *m_t ){
-		case WELCOME_MESS:
-		case PEER_SETS_NAME:
-		case REQ_LIST_OF_PEERS:
-		case REQ_CONN_TO_PEER:
-		case REQ_CONN_FROM_PEER:
-		case CONN_TO_PEER_ACCEPTED:
-		case DISCONNECT_GAME:
+		case CLIENT_HELLO:
+		case SERVER_HELLO:
+		case GENERIC_ERR:
+		case SERVER_QUIT:
 			((simple_mess*)msg)->peer_id = ntohl(((simple_mess*)msg)->peer_id);
 			break;
 		
-		case PEER_SETS_UDP_PORT:
+		/*case PEER_SETS_UDP_PORT:
 			((reg_set_udp_port*)msg)->peer_id = ntohl(((reg_set_udp_port*)msg)->peer_id);
 			((reg_set_udp_port*)msg)->udp_port = ntohs(((reg_set_udp_port*)msg)->udp_port);
 			break;
@@ -85,7 +79,7 @@ void convert_to_host_order( void* msg )
 		case RES_LIST_OF_PEERS:
 			((res_list_peers*)msg)->n_peer = ntohl(((res_list_peers*)msg)->n_peer);
 			break;
-			
+		*/	
 		default:
 			break;
 	}
