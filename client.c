@@ -14,10 +14,10 @@
 
 #include <openssl/err.h>
 
-bool read_pub_key(EVP_PKEY** pubkeys)
+bool read_pub_key(const char *filename, EVP_PKEY** pubkeys)
 {
         //EVP_PKEY* pubkeys[1];
-        FILE* file = fopen("keys/rsa_server_pubkey.pem", "r");
+        FILE* file = fopen(filename, "r");
 
         if(file == NULL)
                 return false;
@@ -59,13 +59,12 @@ unsigned int readcontent(const char *filename, unsigned char** fcontent)
 void encrypt_antonio(int cl_sock, const char *filename)
 {
 	EVP_PKEY* pubkeys[1];
-	if(!read_pub_key(pubkeys))
+	if(!read_pub_key("keys/rsa_server_pubkey.pem",pubkeys))
 	{
 		printf("Key read error...\n");
 		return;
 	}
 
-//	char msg[] = "MERDA 123456789.";
 	unsigned char *buffer_file;
 	// leggo l contenuto del file da inviare
 	unsigned int file_len = readcontent(filename,&buffer_file);
@@ -117,7 +116,7 @@ void encrypt_antonio(int cl_sock, const char *filename)
 	free(buffer_file);
 }
 
-int main(int argc, char **argv) {
+/*int main(int argc, char **argv) {
 	uint16_t server_port;
 
 	ERR_load_crypto_strings();
@@ -136,4 +135,65 @@ int main(int argc, char **argv) {
 	printf("Invio file...!\n");
 	encrypt_antonio(sock_client, argv[1]);
 	printf("Invio file completato!\n");
+}*/
+
+int main(int argc, char **argv) 
+{
+	int sd;
+	char filename[128];
+	unsigned char *buffer_file = NULL;
+	unsigned int file_len = 0;
+	my_buffer my_buff = {NULL, 0};
+
+	uint16_t server_port;
+
+	unsigned char *ciphertext;
+	EVP_CIPHER_CTX *ctx;
+	int outlen=0, cipherlen = 0;
+	unsigned char *iv;
+
+	unsigned char* encrypted_keys[1];
+	unsigned int encrypted_keys_len[1];
+
+	EVP_PKEY* pubkeys[1];
+	FILE* file_pubkey;
+
+	if( argc < 3 ){
+		perror("use: ./client filename server_ip port");
+		return -1;
+	}
+	sscanf(argv[3],"%hd",&server_port);
+
+	sd = start_tcp_connection(argv[2], server_port);
+
+	// leggo l contenuto del file da inviare
+	file_len = readcontent(argv[1],&buffer_file);
+
+	file_pubkey = fopen("keys/rsa_server_pubkey.pem", "r");
+	pubkeys[0] = PEM_read_PUBKEY(file_pubkey, NULL, NULL, NULL);
+	fclose(file_pubkey);
+
+	encrypted_keys_len[0] = EVP_PKEY_size(pubkeys[0]);
+	encrypted_keys[0] = malloc(encrypted_keys_len[0]);
+	ciphertext = malloc(file_len + 16);
+
+	ctx = malloc(sizeof(EVP_CIPHER_CTX));
+	iv = malloc(EVP_CIPHER_iv_length(EVP_aes_128_cbc())); 
+	EVP_SealInit(ctx, EVP_aes_128_cbc(), encrypted_keys, encrypted_keys_len, iv, pubkeys, 1);
+	EVP_SealUpdate(ctx, ciphertext, &outlen, (unsigned char*)buffer_file, file_len);
+	cipherlen = outlen;
+	EVP_SealFinal(ctx, ciphertext+cipherlen, &outlen);
+	cipherlen += outlen;
+
+	//printf("encrypted_keys_len:%d\n",encrypted_keys_len[0]);
+	send_data(sd,(char*)encrypted_keys[0], encrypted_keys_len[0]);
+	//printf("encrypted_keys:%20s\n",encrypted_keys[0]);
+	printf("iv_len:%d\n",EVP_CIPHER_iv_length(EVP_aes_128_cbc()));
+	send_data(sd,iv,EVP_CIPHER_iv_length(EVP_aes_128_cbc()));
+	//printf("cipherlen:%d\n\n",cipherlen);
+ 	send_data(sd,ciphertext,cipherlen);
+
+	close(sd);
+
+	return 0;
 }

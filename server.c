@@ -24,9 +24,9 @@ uint64_t generate_nonce()
 }
 
 
-bool read_prv_key(EVP_PKEY** prvkey)
+bool read_prv_key(const char *filename, EVP_PKEY** prvkey)
 {
-	FILE* file = fopen("keys/rsa_server_privkey.pem", "r");
+	FILE* file = fopen(filename, "r");
 
 	if(file == NULL)
 		return false;
@@ -42,7 +42,7 @@ bool read_prv_key(EVP_PKEY** prvkey)
 void decrypt_antonio(int connected_client_fd)
 {
 	EVP_PKEY* prvkey;
-	if(!read_prv_key(&prvkey))
+	if(!read_prv_key("keys/rsa_server_privkey.pem",&prvkey))
 	{
 		printf("Key read error...\n");
 		return;
@@ -135,7 +135,7 @@ int decrypt(unsigned char *encrypted_key,
 
 	return plainlen;
 }
-
+/*
 int main(int argc, char **argv)
 {
 	ConnectionTCP conn;
@@ -150,7 +150,7 @@ int main(int argc, char **argv)
 	sscanf(argv[1],"%hd",&server_port);
 
 	printf("Starting server...\n");
-	//int connected_client_fd = start_server_and_wait_client("127.0.0.1", 4444);
+	
 	int sd = open_serverTCP(server_port);
 	int cl_sd = accept_serverTCP(sd,&conn);
 	
@@ -158,4 +158,66 @@ int main(int argc, char **argv)
 
 	close(cl_sd);
 	close(sd);	
+}*/
+
+int main(int argc, char** argv)
+{
+	uint16_t server_port;
+	ConnectionTCP conn;
+	my_buffer my_buff = {NULL, 0};
+
+	int res;
+	unsigned char *plaintext;
+
+	unsigned char *encrypted_key;
+	unsigned int encrypted_key_len;
+	unsigned char *iv;
+	int iv_len;
+	unsigned char *ciphertext;
+	int cipherlen;
+
+	if( argc < 2 ){
+		perror("use: ./server port");
+		return -1;
+	}
+
+	sscanf(argv[1],"%hd",&server_port);
+
+	EVP_PKEY *privkey;
+	bool r = read_prv_key("keys/rsa_server_privkey.pem", &privkey);
+	if( !r ){
+		printf("Errore lettura chiave privata\n");
+		return -1;
+	}
+
+
+	int sd = open_serverTCP(server_port);
+	int cl_sd = accept_serverTCP(sd,&conn);
+
+	//ricevo la chiave simmetrica
+	encrypted_key_len = recv_data(cl_sd, &my_buff);
+	encrypted_key = malloc(encrypted_key_len);
+	memcpy(encrypted_key, my_buff.buf, encrypted_key_len);
+
+	//ricevo l'iv
+	iv_len = recv_data(cl_sd, &my_buff);
+	iv = malloc(iv_len);
+	memcpy(iv, my_buff.buf, iv_len);
+	//ricevo il ciphertext
+	cipherlen = recv_data(cl_sd, &my_buff);
+	ciphertext = malloc(cipherlen);
+	memcpy(ciphertext, my_buff.buf, cipherlen);
+
+//	printf("Alloco plaintext di %d byte \n",ciph_len);
+	plaintext = malloc(cipherlen);
+
+	decrypt(encrypted_key,encrypted_key_len,iv,privkey,ciphertext,cipherlen,&plaintext);
+
+	printf("plaintext:%s\n",plaintext);
+	close(cl_sd);
+	close(sd);
+
+	//manca la pulizia dei buffer
+
+	return 0;
 }
