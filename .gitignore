@@ -1,0 +1,6 @@
+client
+server
+*.o
+
+# Certificates must be regenerated
+*.pem
