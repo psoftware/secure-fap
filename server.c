@@ -1,3 +1,4 @@
+#include "net_wrapper.h"
 #include "commonlib/commonlib.h"
 
 #include <arpa/inet.h>
@@ -12,12 +13,20 @@
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
-
+#include <openssl/rand.h>
 #include <openssl/err.h>
+
+uint64_t generate_nonce()
+{
+	uint64_t nonce;
+	RAND_bytes((unsigned char*)nonce,64);
+	return nonce;
+}
+
 
 bool read_prv_key(EVP_PKEY** prvkey)
 {
-	FILE* file = fopen("rsa_privkey.pem", "r");
+	FILE* file = fopen("keys/rsa_server_privkey.pem", "r");
 
 	if(file == NULL)
 		return false;
@@ -30,7 +39,7 @@ bool read_prv_key(EVP_PKEY** prvkey)
 	return true;
 }
 
-void decrypt(int connected_client_fd)
+void decrypt_antonio(int connected_client_fd)
 {
 	EVP_PKEY* prvkey;
 	if(!read_prv_key(&prvkey))
@@ -106,12 +115,47 @@ void decrypt(int connected_client_fd)
 	printf("Text: %s\n", plaintext);
 }
 
-int main()
+int decrypt(unsigned char *encrypted_key, 
+	unsigned int encrypted_key_len, 
+	unsigned char *iv, 
+	EVP_PKEY *privkey, 
+	unsigned char *ciphertext, 
+	unsigned int cipherlen, 
+	unsigned char **plaintext)
 {
+	EVP_CIPHER_CTX *ctx = malloc(sizeof(EVP_CIPHER_CTX));
+	int outlen = 0, plainlen = 0;
+	int err = EVP_OpenInit(ctx, EVP_aes_128_cbc(), encrypted_key, encrypted_key_len, iv, privkey);
+	//printf("EVP_OpenInit %d\n",err);
+	EVP_OpenUpdate(ctx, *plaintext, &outlen, ciphertext, cipherlen);
+	//printf("EVP_OpenUpdate OK!\n");
+	plainlen = outlen;
+	EVP_OpenFinal(ctx, *plaintext + plainlen, &outlen);
+	plainlen += outlen;
+
+	return plainlen;
+}
+
+int main(int argc, char **argv)
+{
+	ConnectionTCP conn;
+	uint16_t server_port;
 	ERR_load_crypto_strings();
+	
+	if( argc < 2 ){
+		perror("use: ./server port");
+		return -1;
+	}
+
+	sscanf(argv[1],"%hd",&server_port);
 
 	printf("Starting server...\n");
-	int connected_client_fd = start_server_and_wait_client("127.0.0.1", 4444);
+	//int connected_client_fd = start_server_and_wait_client("127.0.0.1", 4444);
+	int sd = open_serverTCP(server_port);
+	int cl_sd = accept_serverTCP(sd,&conn);
+	
+	decrypt_antonio(cl_sd);
 
-	decrypt(connected_client_fd);
+	close(cl_sd);
+	close(sd);	
 }

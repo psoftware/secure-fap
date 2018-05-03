@@ -1,3 +1,4 @@
+#include "net_wrapper.h"
 #include "commonlib/commonlib.h"
 
 #include <string.h>
@@ -16,7 +17,7 @@
 bool read_pub_key(EVP_PKEY** pubkeys)
 {
         //EVP_PKEY* pubkeys[1];
-        FILE* file = fopen("rsa_pubkey.pem", "r");
+        FILE* file = fopen("keys/rsa_server_pubkey.pem", "r");
 
         if(file == NULL)
                 return false;
@@ -29,7 +30,33 @@ bool read_pub_key(EVP_PKEY** pubkeys)
         return true;
 }
 
-void encrypt(int cl_sock)
+unsigned int readcontent(const char *filename, unsigned char** fcontent)
+{
+	unsigned int fsize = 0;
+	FILE *fp;
+
+	fp = fopen(filename, "r");
+	if(fp) {
+		fseek(fp, 0, SEEK_END);
+		fsize = ftell(fp);
+		rewind(fp);
+
+		//printf("fsize is %u \n",fsize);
+		*fcontent = (unsigned char*) malloc(sizeof(char) * fsize + 1);
+		fread(*fcontent, 1, fsize, fp);
+		(*fcontent)[fsize] = '\0';
+
+		fclose(fp);
+	} else {
+		perror("file doesn't exist \n");
+		return 0;
+	}
+	return fsize + 1;
+}
+
+
+
+void encrypt_antonio(int cl_sock)
 {
 	EVP_PKEY* pubkeys[1];
 	if(!read_pub_key(pubkeys))
@@ -85,19 +112,23 @@ void encrypt(int cl_sock)
 	free(ctx);
 }
 
-int main() {
+int main(int argc, char **argv) {
+	uint16_t server_port;
+
 	ERR_load_crypto_strings();
 
-	printf("Mi connetto...\n");
-	int sock_client = start_tcp_connection("127.0.0.1", 4444);
-	if(sock_client < 0)
-	{
-		printf("Connessione non riuscita.\n");
-		return 0;
+	if( argc < 3 ){
+		perror("use: ./client filename server_ip port");
+		return -1;
 	}
+
+
+	sscanf(argv[3],"%hd",&server_port);
+	printf("Mi connetto...\n");
+	int sock_client = start_tcp_connection(argv[2], server_port);
 	printf("Connessione riuscita!\n");
 
 	printf("Invio file...!\n");
-	encrypt(sock_client);
+	encrypt_antonio(sock_client);
 	printf("Invio file completato!\n");
 }
