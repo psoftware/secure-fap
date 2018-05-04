@@ -15,11 +15,16 @@ typedef enum
 
 #define INIT_WELCOME_MESS(id) {WELCOME_MESS, (id)};
 
-typedef struct simple_mess_t
+typedef struct simple_msg_t
 {
 	message_type t;
-	int32_t peer_id;
-}__attribute__((packed)) simple_mess;
+}__attribute__((packed)) simple_msg;
+
+typedef struct hello_msg_t
+{
+	message_type t;
+	int32_t nonce;
+}__attribute__((packed)) hello_msg;
 
 
 /*******************************************

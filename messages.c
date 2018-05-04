@@ -4,12 +4,13 @@ void convert_to_network_order( void* msg )
 {
 	message_type* m_t = (message_type*)msg;
 	switch( *m_t ){
-		case CLIENT_HELLO:
-		case SERVER_HELLO:
 		case GENERIC_ERR:
 		case SERVER_QUIT:
-			((simple_mess*)msg)->t = htonl(((simple_mess*)msg)->t);
-			((simple_mess*)msg)->peer_id = htonl(((simple_mess*)msg)->peer_id);
+			((simple_msg*)msg)->t = htonl(((simple_msg*)msg)->t);
+		case CLIENT_HELLO:
+		case SERVER_HELLO:
+			((hello_msg*)msg)->t = htonl(((hello_msg*)msg)->t);
+			((hello_msg*)msg)->nonce = htonl(((hello_msg*)msg)->nonce);
 			break;
 		
 /*		case PEER_SETS_UDP_PORT:
@@ -60,9 +61,7 @@ void convert_to_host_order( void* msg )
 	switch( *m_t ){
 		case CLIENT_HELLO:
 		case SERVER_HELLO:
-		case GENERIC_ERR:
-		case SERVER_QUIT:
-			((simple_mess*)msg)->peer_id = ntohl(((simple_mess*)msg)->peer_id);
+			((simple_msg*)msg)->nonce = ntohl(((simple_msg*)msg)->nonce);
 			break;
 		
 		/*case PEER_SETS_UDP_PORT:
