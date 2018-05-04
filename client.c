@@ -1,4 +1,5 @@
 #include "net_wrapper.h"
+#include "messages.h"
 #include "commonlib/commonlib.h"
 
 #include <string.h>
@@ -11,8 +12,15 @@
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
-
+#include <openssl/rand.h>
 #include <openssl/err.h>
+
+uint64_t generate_nonce()
+{
+	uint64_t nonce;
+	RAND_bytes((unsigned char*)&nonce,64);
+	return nonce;
+}
 
 bool read_pub_key(const char *filename, EVP_PKEY** pubkeys)
 {
@@ -136,6 +144,14 @@ void encrypt_antonio(int cl_sock, const char *filename)
 	encrypt_antonio(sock_client, argv[1]);
 	printf("Invio file completato!\n");
 }*/
+
+int send_hello_msg(int sock) {
+	hello_msg h;
+	h.t = CLIENT_HELLO;
+	h.nonce = generate_nonce();
+	convert_to_network_order(&h);
+	return send_data(sock,(unsigned char*)&h, sizeof(h));
+}
 
 int main(int argc, char **argv) 
 {

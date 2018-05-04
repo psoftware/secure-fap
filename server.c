@@ -1,8 +1,6 @@
 #include "net_wrapper.h"
 #include "commonlib/commonlib.h"
-
-#include <arpa/inet.h>
-#include <sys/socket.h>
+#include "messages.h"
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
@@ -19,8 +17,16 @@
 uint64_t generate_nonce()
 {
 	uint64_t nonce;
-	RAND_bytes((unsigned char*)nonce,64);
+	RAND_bytes((unsigned char*)&nonce,64);
 	return nonce;
+}
+
+int send_hello_msg(int sock) {
+	hello_msg h;
+	h.t = SERVER_HELLO;
+	h.nonce = generate_nonce();
+	convert_to_network_order(&h);
+	return send_data(sock,(unsigned char*)&h, sizeof(h));
 }
 
 
@@ -38,7 +44,7 @@ bool read_prv_key(const char *filename, EVP_PKEY** prvkey)
 	fclose(file);
 	return true;
 }
-
+/*
 void decrypt_antonio(int connected_client_fd)
 {
 	EVP_PKEY* prvkey;
@@ -113,7 +119,7 @@ void decrypt_antonio(int connected_client_fd)
 	plainlen += outlen;
 
 	printf("Text: %s\n", plaintext);
-}
+}*/
 
 int decrypt(unsigned char *encrypted_key, 
 	unsigned int encrypted_key_len, 
