@@ -6,6 +6,18 @@ void convert_to_network_order( void* msg )
 	switch( *m_t ){
 		case GENERIC_ERR:
 		case SERVER_QUIT:
+		case GENERIC_ERR:
+		case SERVER_HELLO:
+		case CLIENT_HELLO: 
+		case KEY_EXCHANGE:
+		case KEY_CONFIRMATION_SERVER:
+		case KEY_CONFIRMATION_CLIENT:
+		case CLIENT_AUTHENTICATION:
+		case AUTHENTICATION_OK:
+		case AUTHENTICATION_FAILED:
+		case LIST_FILE:
+		case SEND_FILE:
+		case QUIT_SESSION:
 			((simple_msg*)msg)->t = htonl(((simple_msg*)msg)->t);
 		case CLIENT_HELLO:
 		case SERVER_HELLO:

@@ -171,7 +171,6 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-
 	encrypted_keys_len[0] = EVP_PKEY_size(pubkeys[0]);
 	encrypted_keys[0] = malloc(encrypted_keys_len[0]);
 	ciphertext = malloc(file_len + 16);
@@ -197,7 +196,7 @@ int main(int argc, char **argv)
 
 	cipherlen += outlen;
 
-	//printf("encrypted_keys_len:%d\n",encrypted_keys_len[0]);
+	printf("encrypted_keys_len:%d\n",encrypted_keys_len[0]);
 	send_data(sd,encrypted_keys[0], encrypted_keys_len[0]);
 	//printf("encrypted_keys:%20s\n",encrypted_keys[0]);
 	printf("iv_len:%d\n",EVP_CIPHER_iv_length(EVP_aes_128_cbc()));

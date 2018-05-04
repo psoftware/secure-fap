@@ -2,14 +2,21 @@
 #define MESSAGES_H
 #include <arpa/inet.h>
 //#define DEBUG
-#define NAME_LEN 64
 
 typedef enum 
 { 
 	GENERIC_ERR,
 	SERVER_HELLO,
 	CLIENT_HELLO, 
-	SERVER_QUIT,
+	KEY_EXCHANGE,
+	KEY_CONFIRMATION_SERVER,
+	KEY_CONFIRMATION_CLIENT,
+	CLIENT_AUTHENTICATION,
+	AUTHENTICATION_OK,
+	AUTHENTICATION_FAILED,
+	LIST_FILE,
+	SEND_FILE,
+	QUIT_SESSION,
 } message_type;
 
 
@@ -25,6 +32,13 @@ typedef struct hello_msg_t
 	message_type t;
 	int32_t nonce;
 }__attribute__((packed)) hello_msg;
+
+typedef struct client_authentication_t
+{
+	message_type t;
+	char username[32];
+	char password[64];
+};
 
 
 /*******************************************
