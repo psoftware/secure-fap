@@ -124,14 +124,35 @@ int decrypt(unsigned char *encrypted_key,
 	unsigned char **plaintext)
 {
 	EVP_CIPHER_CTX *ctx = malloc(sizeof(EVP_CIPHER_CTX));
+	if( ctx == NULL ){
+		printf("Error allocate EVP_CIPHER_CTX \n");
+		return 0;
+	}
+	
 	int outlen = 0, plainlen = 0;
-	int err = EVP_OpenInit(ctx, EVP_aes_128_cbc(), encrypted_key, encrypted_key_len, iv, privkey);
-	//printf("EVP_OpenInit %d\n",err);
-	EVP_OpenUpdate(ctx, *plaintext, &outlen, ciphertext, cipherlen);
-	//printf("EVP_OpenUpdate OK!\n");
+	int evp_res = EVP_OpenInit(ctx, EVP_aes_128_cbc(), encrypted_key, encrypted_key_len, iv, privkey);
+	if(evp_res == 0) {
+		printf("EVP_OpenInit Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
+		return 0;
+	}
+
+	evp_res = EVP_OpenUpdate(ctx, *plaintext, &outlen, ciphertext, cipherlen);
+	if(evp_res == 0) {
+		printf("EVP_OpenUpdate Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
+		return 0;
+	}
+	
 	plainlen = outlen;
-	EVP_OpenFinal(ctx, *plaintext + plainlen, &outlen);
+	evp_res = EVP_OpenFinal(ctx, *plaintext + plainlen, &outlen);
+	if(evp_res == 0) {
+		printf("EVP_OpenFinal Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
+		return 0;
+	}
+
 	plainlen += outlen;
+
+	EVP_CIPHER_CTX_cleanup(ctx);
+	free(ctx);
 
 	return plainlen;
 }
@@ -160,36 +181,43 @@ int main(int argc, char **argv)
 	close(sd);	
 }*/
 
+/*void gestione_errori(unsigned int err)
+{
+	switch(err){
+		case 1:
+		case 2:
+		case 3:
+	}
+}*/
+
 int main(int argc, char** argv)
 {
+	int err = 0;
 	uint16_t server_port;
 	ConnectionTCP conn;
 	my_buffer my_buff = {NULL, 0};
 
-	int res;
 	unsigned char *plaintext;
-
 	unsigned char *encrypted_key;
 	unsigned int encrypted_key_len;
 	unsigned char *iv;
-	int iv_len;
 	unsigned char *ciphertext;
-	int cipherlen;
+	unsigned int cipherlen=0, iv_len=0;
+	EVP_PKEY *privkey;
 
 	if( argc < 2 ){
-		perror("use: ./server port");
+		printf("use: ./server port");
 		return -1;
 	}
 
 	sscanf(argv[1],"%hd",&server_port);
 
-	EVP_PKEY *privkey;
+	
 	bool r = read_prv_key("keys/rsa_server_privkey.pem", &privkey);
 	if( !r ){
 		printf("Errore lettura chiave privata\n");
 		return -1;
 	}
-
 
 	int sd = open_serverTCP(server_port);
 	int cl_sd = accept_serverTCP(sd,&conn);
@@ -197,27 +225,49 @@ int main(int argc, char** argv)
 	//ricevo la chiave simmetrica
 	encrypted_key_len = recv_data(cl_sd, &my_buff);
 	encrypted_key = malloc(encrypted_key_len);
+	if( encrypted_key == NULL ) {
+		printf("Cannot allocate encrypted_key\n");
+		err = -1;
+		goto finalize;
+	}
 	memcpy(encrypted_key, my_buff.buf, encrypted_key_len);
 
 	//ricevo l'iv
 	iv_len = recv_data(cl_sd, &my_buff);
 	iv = malloc(iv_len);
+	if( iv == NULL ) {
+		printf("Cannot allocate iv \n");
+		err = -1;
+		goto finalize;
+	}
+
 	memcpy(iv, my_buff.buf, iv_len);
+
 	//ricevo il ciphertext
 	cipherlen = recv_data(cl_sd, &my_buff);
 	ciphertext = malloc(cipherlen);
+	if( ciphertext == NULL ) {
+		printf("Cannot allocate ciphertext \n");
+		err = -1;
+		goto finalize;
+	}
 	memcpy(ciphertext, my_buff.buf, cipherlen);
 
 //	printf("Alloco plaintext di %d byte \n",ciph_len);
 	plaintext = malloc(cipherlen);
+	if( plaintext == NULL ) {
+		printf("Cannot allocate plaintext \n");
+		err = -1;
+		goto finalize;
+	}
 
 	decrypt(encrypted_key,encrypted_key_len,iv,privkey,ciphertext,cipherlen,&plaintext);
 
 	printf("plaintext:%s\n",plaintext);
+
+finalize:
 	close(cl_sd);
 	close(sd);
 
-	//manca la pulizia dei buffer
-
-	return 0;
+	return err;
 }
