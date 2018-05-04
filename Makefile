@@ -7,10 +7,10 @@ server: server.o net_wrapper.o commonlib_obj
 	gcc server.o commonlib/commonlib.o net_wrapper.o -o server -lcrypto -g
 
 client.o: client.c
-	gcc -c -g client.c -o client.o
+	gcc -c -g -Wall client.c -o client.o
 
 server.o: server.c
-	gcc -c -g server.c -o server.o
+	gcc -c -g -Wall server.c -o server.o
 
 
 commonlib_obj: commonlib/commonlib.c commonlib/commonlib.h
