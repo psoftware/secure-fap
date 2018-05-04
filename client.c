@@ -15,10 +15,14 @@
 #include <openssl/rand.h>
 #include <openssl/err.h>
 
+
+uint64_t cl_nonce;
+uint64_t sr_nonce;
+
 uint64_t generate_nonce()
 {
 	uint64_t nonce;
-	RAND_bytes((unsigned char*)&nonce,64);
+	RAND_bytes((unsigned char*)&nonce,8);
 	return nonce;
 }
 
@@ -148,9 +152,25 @@ void encrypt_antonio(int cl_sock, const char *filename)
 int send_hello_msg(int sock) {
 	hello_msg h;
 	h.t = CLIENT_HELLO;
-	h.nonce = generate_nonce();
+	h.nonce = cl_nonce = generate_nonce();
 	convert_to_network_order(&h);
+	printf("client sends nonce: %ld\n",cl_nonce);
 	return send_data(sock,(unsigned char*)&h, sizeof(h));
+}
+
+int analyze_message(unsigned char* buf)
+{
+	convert_to_host_order(buf);
+	switch( ((simple_msg*)buf)->t ) {
+  		case SERVER_HELLO:
+  			sr_nonce = ((hello_msg*)buf)->nonce;
+  			printf("Server nonce received: %ld\n",sr_nonce);
+  			break;
+		default:
+			return -2;
+	}
+
+	return 0;
 }
 
 int main(int argc, char **argv) 
@@ -158,7 +178,6 @@ int main(int argc, char **argv)
 	int sd;
 	unsigned char *buffer_file = NULL;
 	unsigned int file_len = 0;
-
 	uint16_t server_port;
 
 	unsigned char *ciphertext;
@@ -171,6 +190,10 @@ int main(int argc, char **argv)
 	EVP_PKEY* pubkeys[1];
 	int evp_res;
 
+	my_buffer my_buff;
+	my_buff.buf = NULL;
+	my_buff.size = 0;
+
 	if( argc < 3 ){
 		perror("use: ./client filename server_ip port");
 		return -1;
@@ -178,6 +201,11 @@ int main(int argc, char **argv)
 	sscanf(argv[3],"%hd",&server_port);
 
 	sd = start_tcp_connection(argv[2], server_port);
+	if( sd < 0 )
+		return -1;
+	send_hello_msg(sd);
+	recv_data(sd,&my_buff);
+	analyze_message(my_buff.buf);
 
 	// leggo l contenuto del file da inviare
 	file_len = readcontent(argv[1],&buffer_file);

@@ -14,18 +14,22 @@
 #include <openssl/rand.h>
 #include <openssl/err.h>
 
+uint64_t sr_nonce;
+uint64_t cl_nonce;
+
 uint64_t generate_nonce()
 {
 	uint64_t nonce;
-	RAND_bytes((unsigned char*)&nonce,64);
+	RAND_bytes((unsigned char*)&nonce,8);
 	return nonce;
 }
 
 int send_hello_msg(int sock) {
 	hello_msg h;
 	h.t = SERVER_HELLO;
-	h.nonce = generate_nonce();
+	h.nonce = sr_nonce = generate_nonce();
 	convert_to_network_order(&h);
+	printf("server sends nonce: %ld\n",sr_nonce);
 	return send_data(sock,(unsigned char*)&h, sizeof(h));
 }
 
@@ -162,46 +166,29 @@ int decrypt(unsigned char *encrypted_key,
 
 	return plainlen;
 }
-/*
-int main(int argc, char **argv)
+
+int analyze_message(unsigned char* buf)
 {
-	ConnectionTCP conn;
-	uint16_t server_port;
-	ERR_load_crypto_strings();
-	
-	if( argc < 2 ){
-		perror("use: ./server port");
-		return -1;
+	convert_to_host_order(buf);
+ 	switch( ((simple_msg*)buf)->t ) {
+  		case CLIENT_HELLO:
+  			cl_nonce = ((hello_msg*)buf)->nonce;
+  			printf("Client nonce received: %ld\n",cl_nonce);
+  			break;
+		default:
+			return -2;
 	}
 
-	sscanf(argv[1],"%hd",&server_port);
-
-	printf("Starting server...\n");
-	
-	int sd = open_serverTCP(server_port);
-	int cl_sd = accept_serverTCP(sd,&conn);
-	
-	decrypt_antonio(cl_sd);
-
-	close(cl_sd);
-	close(sd);	
-}*/
-
-/*void gestione_errori(unsigned int err)
-{
-	switch(err){
-		case 1:
-		case 2:
-		case 3:
-	}
-}*/
-
+	return 0;
+}
 int main(int argc, char** argv)
 {
 	int err = 0;
 	uint16_t server_port;
 	ConnectionTCP conn;
-	my_buffer my_buff = {NULL, 0};
+	my_buffer my_buff;
+	my_buff.buf = NULL;
+	my_buff.size = 0;
 
 	unsigned char *plaintext;
 	unsigned char *encrypted_key;
@@ -227,6 +214,10 @@ int main(int argc, char** argv)
 
 	int sd = open_serverTCP(server_port);
 	int cl_sd = accept_serverTCP(sd,&conn);
+
+	recv_data(cl_sd,&my_buff); 
+	analyze_message(my_buff.buf);
+	send_hello_msg(cl_sd);
 
 	//ricevo la chiave simmetrica
 	encrypted_key_len = recv_data(cl_sd, &my_buff);
@@ -269,7 +260,7 @@ int main(int argc, char** argv)
 
 	decrypt(encrypted_key,encrypted_key_len,iv,privkey,ciphertext,cipherlen,&plaintext);
 
-	printf("plaintext:%s\n",plaintext);
+	//printf("plaintext:%s\n",plaintext);
 
 finalize:
 	close(cl_sd);

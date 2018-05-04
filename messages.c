@@ -48,12 +48,11 @@ void convert_to_host_order( void* msg )
 		case LIST_FILE:
 		case SEND_FILE:
 		case QUIT_SESSION:
-			((simple_msg*)msg)->t = ntohl(((simple_msg*)msg)->t);
 			break;
 		case CLIENT_HELLO:
 		case SERVER_HELLO:
-			((hello_msg*)msg)->t = ntohl(((hello_msg*)msg)->t);
 			((hello_msg*)msg)->nonce = NTOHLL(((hello_msg*)msg)->nonce);
+			break;
 		default:
 			break;
 	}
