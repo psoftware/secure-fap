@@ -213,8 +213,8 @@ int main(int argc, char** argv)
 		return -1;
 	}
 
-	int sd = open_serverTCP(server_port);
-	int cl_sd = accept_serverTCP(sd,&conn);
+	int sd = open_tcp_server(server_port);
+	int cl_sd = accept_tcp_server(sd,&conn);
 
 	recv_data(cl_sd,&my_buff); 
 	analyze_message(my_buff.buf);

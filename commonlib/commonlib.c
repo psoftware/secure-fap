@@ -54,49 +54,7 @@ unsigned int hmac_compute(unsigned char *inputdata[], unsigned int inputdata_len
 	return outlen;
 }
 
-/* OBSOLETE*/
-int initialize_server_socket(const char * bind_addr, int port)
-{
-	int ret_sock = socket(AF_INET, SOCK_STREAM, 0);
-	struct sockaddr_in my_addr;
-	memset(&my_addr, 0, sizeof(my_addr));
-	my_addr.sin_family = AF_INET;
-	my_addr.sin_port = htons(port);
-	inet_pton(AF_INET, bind_addr, &my_addr.sin_addr);
-
-	if(bind(ret_sock, (struct sockaddr*)&my_addr, sizeof(my_addr)) == -1)
-	{
-		printf("Error %s\n", strerror(errno));
-		return -1;
-	}
-	if(listen(ret_sock, 10) == -1)
-	{
-		printf("Error %s\n", strerror(errno));
-		return -2;
-	}
-
-	return ret_sock;
-}
-
-int start_server_and_wait_client(const char* ip_addr, int port)
-{
-	int server_socket = initialize_server_socket(ip_addr, port);
-	if(server_socket < 0)
-	{
-		printf("Error %s\n", strerror(errno));
-		return 1;
-	}
-
-	printf("start_server: server in ascolto su %s:%d\n", ip_addr, port);
-
-	// dobbiamo aspettare che il client si connetta
-	struct sockaddr_in cl_addr;
-	int my_len = sizeof(cl_addr);
-	int connected_client_fd = accept(server_socket, (struct sockaddr*)&cl_addr, (socklen_t*)&my_len);
-	printf("start_server: client connesso!\n");
-
-	return connected_client_fd;
-}
+// to remove
 
 int recv_variable_string(int cl_sock, unsigned char * buff)
 {
@@ -121,27 +79,6 @@ int recv_variable_string(int cl_sock, unsigned char * buff)
 	//print_hex(buff, bytes_count);
 
 	return bytes_count;
-}
-
-int start_tcp_connection(const char* ip_str, int port)
-{
-	// creo il socket TCP
-	int sock_client = socket(AF_INET, SOCK_STREAM, 0);
-
-	struct sockaddr_in srv_addr;
-	memset(&srv_addr, 0, sizeof(srv_addr));
-	srv_addr.sin_family = AF_INET;
-	srv_addr.sin_port = htons(port);
-	inet_pton(AF_INET, ip_str, &srv_addr.sin_addr);
-	
-	// effettuo la connect al server indicato
-	if(connect(sock_client, (struct sockaddr *)&srv_addr, sizeof(srv_addr)) == -1)
-	{
-		perror("Connect fallita");
-		return -1;
-	}
-
-	return sock_client;
 }
 
 int send_variable_string(int cl_sock, unsigned char * buff, int bytes_count)

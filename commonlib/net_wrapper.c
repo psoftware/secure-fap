@@ -1,7 +1,7 @@
 #include "net_wrapper.h"
 
 
-int open_serverTCP(uint16_t port)
+int open_tcp_server(uint16_t port)
 {
 	char ip_str[16];
 	int sock = -1, ret=-1;
@@ -38,13 +38,34 @@ int open_serverTCP(uint16_t port)
 		return sock;
 }
 
+int start_tcp_connection(const char* ip_str, uint16_t port)
+{
+	// creo il socket TCP
+	int sock_client = socket(AF_INET, SOCK_STREAM, 0);
+
+	struct sockaddr_in srv_addr;
+	memset(&srv_addr, 0, sizeof(srv_addr));
+	srv_addr.sin_family = AF_INET;
+	srv_addr.sin_port = htons(port);
+	inet_pton(AF_INET, ip_str, &srv_addr.sin_addr);
+	
+	// effettuo la connect al server indicato
+	if(connect(sock_client, (struct sockaddr *)&srv_addr, sizeof(srv_addr)) == -1)
+	{
+		perror("Connect fallita");
+		return -1;
+	}
+
+	return sock_client;
+}
+
 int close_connection( ConnectionTCP *conn )
 {
 	return close(conn->socket);
 }
 
 
-int accept_serverTCP(int sock_serv, ConnectionTCP *conn)
+int accept_tcp_server(int sock_serv, ConnectionTCP *conn)
 {
 	int sd;
 	char ip_str[16];

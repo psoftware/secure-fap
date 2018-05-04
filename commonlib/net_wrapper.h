@@ -27,11 +27,15 @@ typedef struct ConnectionTCP_t
 }ConnectionTCP;
 
 
+
 /**Richiede numero di porta little endian**/
-int open_serverTCP(uint16_t port);
+int open_tcp_server(uint16_t port);
 
 /**restituisce id della socket che ha avuto la connessione*/
-int accept_serverTCP(int sock_serv, ConnectionTCP *conn);
+int accept_tcp_server(int sock_serv, ConnectionTCP *conn);
+
+int start_tcp_connection(const char* ip_str, uint16_t port);
+
 
 
 /********************************************************
