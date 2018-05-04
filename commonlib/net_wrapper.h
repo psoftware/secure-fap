@@ -27,6 +27,9 @@ typedef struct ConnectionTCP_t
 }ConnectionTCP;
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**Richiede numero di porta little endian**/
 int open_tcp_server(uint16_t port);
@@ -35,8 +38,6 @@ int open_tcp_server(uint16_t port);
 int accept_tcp_server(int sock_serv, ConnectionTCP *conn);
 
 int start_tcp_connection(const char* ip_str, uint16_t port);
-
-
 
 /********************************************************
 * Riceve dati dalla socket indicata. La funzione negozia
@@ -52,4 +53,9 @@ int send_data(int sockt, unsigned char* buf, uint32_t buf_len);
 int close_connection(ConnectionTCP *conn);
 
 void clear_my_buffer(my_buffer *myb);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif

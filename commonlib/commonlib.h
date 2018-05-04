@@ -14,6 +14,10 @@ typedef enum { false, true } bool;
 
 #define HMAC_LENGTH 32
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* ##### OpenSSL Help Functions ##### */
 unsigned int hmac_compute(
 	unsigned char *inputdata[], unsigned int inputdata_length[], unsigned int inputdata_count,
@@ -29,5 +33,9 @@ int recv_variable_string(int cl_sock, unsigned char * buff);
 
 // Client functions
 int send_variable_string(int cl_sock, unsigned char * buff, int bytes_count);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
