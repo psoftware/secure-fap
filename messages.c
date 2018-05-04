@@ -1,14 +1,14 @@
 #include "messages.h"
 
+// conversioni host order <-------> network order per interi su 64bit
+#define HTONLL(x) ((1==htonl(1)) ? (x) : (((uint64_t)htonl((x) & 0xFFFFFFFFUL)) << 32) | htonl((uint32_t)((x) >> 32)))
+#define NTOHLL(x) ((1==ntohl(1)) ? (x) : (((uint64_t)ntohl((x) & 0xFFFFFFFFUL)) << 32) | ntohl((uint32_t)((x) >> 32)))
+
 void convert_to_network_order( void* msg )
 {
 	message_type* m_t = (message_type*)msg;
 	switch( *m_t ){
 		case GENERIC_ERR:
-		case SERVER_QUIT:
-		case GENERIC_ERR:
-		case SERVER_HELLO:
-		case CLIENT_HELLO: 
 		case KEY_EXCHANGE:
 		case KEY_CONFIRMATION_SERVER:
 		case KEY_CONFIRMATION_CLIENT:
@@ -19,45 +19,12 @@ void convert_to_network_order( void* msg )
 		case SEND_FILE:
 		case QUIT_SESSION:
 			((simple_msg*)msg)->t = htonl(((simple_msg*)msg)->t);
+			break;
 		case CLIENT_HELLO:
 		case SERVER_HELLO:
 			((hello_msg*)msg)->t = htonl(((hello_msg*)msg)->t);
-			((hello_msg*)msg)->nonce = htonl(((hello_msg*)msg)->nonce);
+			((hello_msg*)msg)->nonce = HTONLL(((hello_msg*)msg)->nonce);
 			break;
-		
-/*		case PEER_SETS_UDP_PORT:
-			((reg_set_udp_port*)msg)->t = htonl(((reg_set_udp_port*)msg)->t);
-			((reg_set_udp_port*)msg)->peer_id = htonl(((reg_set_udp_port*)msg)->peer_id);
-			((reg_set_udp_port*)msg)->udp_port = htons(((reg_set_udp_port*)msg)->udp_port);
-			break;
-		
-		case NAME_ACCEPTED:
-		case NAME_REFUSED:
-		case PEER_DOES_NOT_EXIST:
-		case PEER_IS_NOT_FREE:
-		case CONN_TO_PEER_REFUSED:
-		case SERVER_QUIT:
-		case OPPONENT_DISCONNECTED:
-		case SHIP_ARRANGED:
-		case SHOT_SHIP:
-		case SHIP_HIT:
-		case SHIP_MISS:
-		case YOU_WON:
-			*m_t = htonl(*m_t);
-			break;
-	
-		case ACCEPT_CONN_FROM_PEER:
-		case REFUSE_CONN_FROM_PEER:
-			((response_conn_to_peer*)msg)->t = htonl(((response_conn_to_peer*)msg)->t);
-			((response_conn_to_peer*)msg)->peer_id = htonl(((response_conn_to_peer*)msg)->peer_id);
-			((response_conn_to_peer*)msg)->opponent_id = htonl(((response_conn_to_peer*)msg)->opponent_id);
-			break;
-	
-		case RES_LIST_OF_PEERS:
-			((res_list_peers*)msg)->t = htonl(((res_list_peers*)msg)->t);
-			((res_list_peers*)msg)->n_peer = htonl(((res_list_peers*)msg)->n_peer);
-			break;
-*/
 		default:
 			break;
 	}
@@ -71,26 +38,22 @@ void convert_to_host_order( void* msg )
 	*m_t = ntohl(*m_t);
 
 	switch( *m_t ){
+		case GENERIC_ERR:
+		case KEY_EXCHANGE:
+		case KEY_CONFIRMATION_SERVER:
+		case KEY_CONFIRMATION_CLIENT:
+		case CLIENT_AUTHENTICATION:
+		case AUTHENTICATION_OK:
+		case AUTHENTICATION_FAILED:
+		case LIST_FILE:
+		case SEND_FILE:
+		case QUIT_SESSION:
+			((simple_msg*)msg)->t = ntohl(((simple_msg*)msg)->t);
+			break;
 		case CLIENT_HELLO:
 		case SERVER_HELLO:
-			((simple_msg*)msg)->nonce = ntohl(((simple_msg*)msg)->nonce);
-			break;
-		
-		/*case PEER_SETS_UDP_PORT:
-			((reg_set_udp_port*)msg)->peer_id = ntohl(((reg_set_udp_port*)msg)->peer_id);
-			((reg_set_udp_port*)msg)->udp_port = ntohs(((reg_set_udp_port*)msg)->udp_port);
-			break;
-
-		case ACCEPT_CONN_FROM_PEER:
-		case REFUSE_CONN_FROM_PEER:
-			((response_conn_to_peer*)msg)->peer_id = ntohl(((response_conn_to_peer*)msg)->peer_id);
-			((response_conn_to_peer*)msg)->opponent_id = ntohl(((response_conn_to_peer*)msg)->opponent_id);
-			break;
-	
-		case RES_LIST_OF_PEERS:
-			((res_list_peers*)msg)->n_peer = ntohl(((res_list_peers*)msg)->n_peer);
-			break;
-		*/	
+			((hello_msg*)msg)->t = ntohl(((hello_msg*)msg)->t);
+			((hello_msg*)msg)->nonce = NTOHLL(((hello_msg*)msg)->nonce);
 		default:
 			break;
 	}

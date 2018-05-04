@@ -30,7 +30,7 @@ typedef struct simple_msg_t
 typedef struct hello_msg_t
 {
 	message_type t;
-	int32_t nonce;
+	uint64_t nonce; 
 }__attribute__((packed)) hello_msg;
 
 typedef struct client_authentication_t
@@ -38,7 +38,7 @@ typedef struct client_authentication_t
 	message_type t;
 	char username[32];
 	char password[64];
-};
+} __attribute__((packed)) client_authentication;
 
 
 /*******************************************
