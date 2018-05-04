@@ -134,7 +134,7 @@ int decrypt(unsigned char *encrypted_key,
 	unsigned int cipherlen, 
 	unsigned char **plaintext)
 {
-	EVP_CIPHER_CTX *ctx = malloc(sizeof(EVP_CIPHER_CTX));
+	EVP_CIPHER_CTX *ctx = new EVP_CIPHER_CTX;
 	if( ctx == NULL ){
 		printf("Error allocate EVP_CIPHER_CTX \n");
 		return 0;
@@ -222,7 +222,7 @@ int main(int argc, char** argv)
 
 	//ricevo la chiave simmetrica
 	encrypted_key_len = recv_data(cl_sd, &my_buff);
-	encrypted_key = malloc(encrypted_key_len);
+	encrypted_key = new unsigned char[encrypted_key_len];
 	if( encrypted_key == NULL ) {
 		printf("Cannot allocate encrypted_key\n");
 		err = -1;
@@ -232,7 +232,7 @@ int main(int argc, char** argv)
 
 	//ricevo l'iv
 	iv_len = recv_data(cl_sd, &my_buff);
-	iv = malloc(iv_len);
+	iv = new unsigned char[iv_len];
 	if( iv == NULL ) {
 		printf("Cannot allocate iv \n");
 		err = -1;
@@ -243,7 +243,7 @@ int main(int argc, char** argv)
 
 	//ricevo il ciphertext
 	cipherlen = recv_data(cl_sd, &my_buff);
-	ciphertext = malloc(cipherlen);
+	ciphertext = new unsigned char[cipherlen];
 	if( ciphertext == NULL ) {
 		printf("Cannot allocate ciphertext \n");
 		err = -1;
@@ -252,7 +252,7 @@ int main(int argc, char** argv)
 	memcpy(ciphertext, my_buff.buf, cipherlen);
 
 //	printf("Alloco plaintext di %d byte \n",ciph_len);
-	plaintext = malloc(cipherlen);
+	plaintext = new unsigned char[cipherlen];
 	if( plaintext == NULL ) {
 		printf("Cannot allocate plaintext \n");
 		err = -1;

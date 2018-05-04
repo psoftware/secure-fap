@@ -1,8 +1,6 @@
 #ifndef __COMMONLIB
 #define __COMMONLIB
 
-typedef enum { false, true } bool;
-
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <string.h>

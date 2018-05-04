@@ -31,7 +31,7 @@ unsigned int hmac_compute(unsigned char *inputdata[], unsigned int inputdata_len
 {
 	// initialize ctx
 	HMAC_CTX* hmac_ctx;
-	hmac_ctx = malloc(sizeof(HMAC_CTX));
+	hmac_ctx = new HMAC_CTX;
 	HMAC_CTX_init(hmac_ctx);
 
 	// init HMAC (using sha256)

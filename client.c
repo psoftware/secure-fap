@@ -54,7 +54,7 @@ unsigned int readcontent(const char *filename, unsigned char** fcontent)
 		rewind(fp);
 
 		//printf("fsize is %u \n",fsize);
-		*fcontent = (unsigned char*) malloc(sizeof(char) * fsize + 1);
+		*fcontent = new unsigned char[fsize + 1];
 		fread(*fcontent, 1, fsize, fp);
 		(*fcontent)[fsize] = '\0';
 
@@ -133,11 +133,11 @@ int main(int argc, char **argv)
 	}
 
 	encrypted_keys_len[0] = EVP_PKEY_size(pubkeys[0]);
-	encrypted_keys[0] = malloc(encrypted_keys_len[0]);
-	ciphertext = malloc(file_len + 16);
+	encrypted_keys[0] = new unsigned char[encrypted_keys_len[0]];
+	ciphertext = new unsigned char[file_len + 16];
 
-	ctx = malloc(sizeof(EVP_CIPHER_CTX));
-	iv = malloc(EVP_CIPHER_iv_length(EVP_aes_128_cbc())); 
+	ctx = new EVP_CIPHER_CTX;
+	iv = new unsigned char[EVP_CIPHER_iv_length(EVP_aes_128_cbc())];
 	if( iv == NULL ){
 		printf("Cannot allocate iv \n");
 		return -1;
