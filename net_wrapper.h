@@ -15,7 +15,7 @@
 
 typedef struct my_buffer_t
 {
-	char* buf;
+	unsigned char* buf;
 	uint32_t size;
 }my_buffer;
 
@@ -43,7 +43,7 @@ int accept_serverTCP(int sock_serv, ConnectionTCP *conn);
 int recv_data(int sockt, my_buffer* my_buff);
 
 /*l'ultimo parametro dice quanti byte inviare (max 4GiB)*/
-int send_data(int sockt, char* buf, uint32_t buf_len);
+int send_data(int sockt, unsigned char* buf, uint32_t buf_len);
 
 int close_connection(ConnectionTCP *conn);
 

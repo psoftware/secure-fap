@@ -61,7 +61,7 @@ int accept_serverTCP(int sock_serv, ConnectionTCP *conn)
 	return sd;
 }
 
-int send_data( int sockt, char* buf, uint32_t buf_len )
+int send_data( int sockt, unsigned char* buf, uint32_t buf_len )
 {
 	uint32_t nbytes = htonl(buf_len);
 	uint32_t bsend = 0;
