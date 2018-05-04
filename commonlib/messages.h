@@ -40,7 +40,9 @@ typedef struct client_authentication_t
 	char password[64];
 } __attribute__((packed)) client_authentication;
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 /*******************************************
 * Riconosce automaticamente il messaggio e
 * lo converte nel network order
@@ -53,5 +55,8 @@ void convert_to_network_order( void* msg );
 ********************************************/
 void convert_to_host_order( void* msg );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

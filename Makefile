@@ -15,14 +15,14 @@ server.o: server.c
 	g++ -c -g -Wall server.c -o server.o
 
 
-commonlib/commonlib.o: commonlib/commonlib.c commonlib/commonlib.h
-	g++ -c -g commonlib/commonlib.c -o commonlib/commonlib.o
+commonlib/commonlib.o: commonlib/commonlib.cpp commonlib/commonlib.h
+	g++ -c -g commonlib/commonlib.cpp -o commonlib/commonlib.o
 
 commonlib/net_wrapper.o: commonlib/net_wrapper.c commonlib/net_wrapper.h
-	g++ -c commonlib/net_wrapper.c -o commonlib/net_wrapper.o
+	gcc -c commonlib/net_wrapper.c -o commonlib/net_wrapper.o
 
 commonlib/messages.o: commonlib/messages.c commonlib/messages.h
-	g++ -c commonlib/messages.c -o commonlib/messages.o
+	gcc -c commonlib/messages.c -o commonlib/messages.o
 
 clean:
 	rm -f client server *.o commonlib/*.o

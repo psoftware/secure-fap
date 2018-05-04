@@ -12,9 +12,6 @@
 
 #define HMAC_LENGTH 32
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /* ##### OpenSSL Help Functions ##### */
 unsigned int hmac_compute(
@@ -27,13 +24,5 @@ void print_hex(unsigned char* buff, unsigned int size);
 
 // Server functions
 int initialize_server_socket(const char * bind_addr, int port);
-int recv_variable_string(int cl_sock, unsigned char * buff);
-
-// Client functions
-int send_variable_string(int cl_sock, unsigned char * buff, int bytes_count);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif
