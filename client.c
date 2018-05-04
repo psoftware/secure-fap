@@ -1,5 +1,5 @@
-#include "net_wrapper.h"
-#include "messages.h"
+#include "commonlib/net_wrapper.h"
+#include "commonlib/messages.h"
 #include "commonlib/commonlib.h"
 
 #include <string.h>
