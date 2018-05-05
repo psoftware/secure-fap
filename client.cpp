@@ -123,6 +123,11 @@ int main(int argc, char **argv)
 	cipherlen += outlen;
 	delete partial_ciphertext;
 
+
+	send_file_msg s_msg = {SEND_FILE, cipherlen, 1};
+	printf("Manderò %d chunk di dimensione:%d \n",s_msg.chunk_number,s_msg.chunk_size);
+	convert_to_network_order(&s_msg);
+	send_data(sd, (unsigned char*)&s_msg, sizeof(s_msg));
 	send_data(sd, ciphertext, cipherlen);
 
 	printf("session_key: ");

@@ -1,6 +1,7 @@
 #ifndef MESSAGES_H
 #define MESSAGES_H
 #include <arpa/inet.h>
+#include <stdio.h>
 //#define DEBUG
 
 typedef enum 

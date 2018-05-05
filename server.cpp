@@ -84,6 +84,8 @@ int main(int argc, char** argv)
 	my_buffer my_buff;
 	my_buff.buf = NULL;
 	my_buff.size = 0;
+	send_file_msg s_msg;
+	int res;
 
 	unsigned char *plaintext;
 	unsigned char *encrypted_key;
@@ -127,7 +129,12 @@ int main(int argc, char** argv)
 
 	memcpy(iv, my_buff.buf, iv_len);
 
-	//ricevo il ciphertext
+	res = recv_data(cl_sd, &my_buff);
+	printf("res=%d sizeof=%d\n",res,sizeof(s_msg));
+	memcpy(&s_msg,my_buff.buf,sizeof(s_msg));
+	convert_to_host_order(&s_msg);
+	printf("Riceverò %d chunk di dimensione:%d \n",s_msg.chunk_number,s_msg.chunk_size);
+
 	cipherlen = recv_data(cl_sd, &my_buff);
 	ciphertext = new unsigned char[cipherlen];
 	if( ciphertext == NULL ) {
@@ -146,7 +153,6 @@ int main(int argc, char** argv)
 	}
 
 	decrypt(encrypted_key, encrypted_key_len, iv, "keys/rsa_server_privkey.pem", ciphertext, cipherlen, &plaintext);
-
 	printf("plaintext: %s\n",plaintext);
 
 finalize:
