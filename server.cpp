@@ -137,13 +137,12 @@ int main(int argc, char** argv)
 	open_file_w("ricevuto.txt", &fp);
 
 	unsigned int total_plainlen = 0;
+	// initialize receive buffer
+	my_buffer chunk_cipher;
+	chunk_cipher.buf = NULL;
+	chunk_cipher.size = 0;
 	for(unsigned int i=0; i < s_msg.chunk_number; i++)
 	{
-		// initialize receive buffer
-		my_buffer chunk_cipher;
-		chunk_cipher.buf = NULL;
-		chunk_cipher.size = 0;
-
 		// get chunk from tcp socket
 		unsigned int chunk_cipherlen = recv_data(cl_sd, &chunk_cipher);
 		printf("encrypting chunk(%d) of %d ciphertext bytes\n", s_msg.chunk_number, chunk_cipherlen);

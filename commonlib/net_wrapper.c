@@ -87,7 +87,7 @@ int send_data( int sockt, unsigned char* buf, uint32_t buf_len )
 	uint32_t nbytes = htonl(buf_len);
 	uint32_t bsend = 0;
 
-      /*invia quanti byte contiene il messaggio(formato big endian)*/
+     /*invia quanti byte contiene il messaggio(formato big endian)*/
 	bsend = send(sockt, (void*)&nbytes, 4, 0);
       
 	#ifdef DEBUG_NET_WRAPPER	

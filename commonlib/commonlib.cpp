@@ -219,5 +219,5 @@ DecryptSession::~DecryptSession()
 	EVP_CIPHER_CTX_cleanup(ctx);
 	delete ctx;
 
-	delete prvkey;
+	//delete prvkey;
 }
