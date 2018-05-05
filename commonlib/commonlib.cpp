@@ -25,6 +25,33 @@ void print_hex(unsigned char* buff, unsigned int size)
 	printf("\n");
 }
 
+unsigned int open_file_r(const char *filename, FILE **fp)
+{
+	unsigned int fsize;
+
+	*fp = fopen(filename, "r");
+	if(*fp) {
+		fseek(*fp, 0, SEEK_END);
+		fsize = ftell(*fp);
+		rewind(*fp);
+	}
+	else {
+		perror("open_file: file doesn't exist\n");
+		return 0;
+	}
+
+	return fsize;
+}
+
+void open_file_w(const char *filename, FILE **fp)
+{
+	*fp = fopen(filename, "w");
+	if(!(*fp)) {
+		perror("open_file: can't create file\n");
+		return;
+	}
+}
+
 /* ##### OpenSSL Help Functions ##### */
 
 unsigned int hmac_compute(unsigned char *inputdata[], unsigned int inputdata_length[], unsigned int inputdata_count, unsigned char *key, unsigned int key_length, unsigned char *hash_output)

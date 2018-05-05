@@ -15,7 +15,6 @@
 #include <openssl/rand.h>
 #include <openssl/err.h>
 
-
 uint64_t cl_nonce;
 uint64_t sr_nonce;
 
@@ -24,30 +23,6 @@ uint64_t generate_nonce()
 	uint64_t nonce;
 	RAND_bytes((unsigned char*)&nonce,8);
 	return nonce;
-}
-
-unsigned int readcontent(const char *filename, unsigned char** fcontent)
-{
-	unsigned int fsize = 0;
-	FILE *fp;
-
-	fp = fopen(filename, "r");
-	if(fp) {
-		fseek(fp, 0, SEEK_END);
-		fsize = ftell(fp);
-		rewind(fp);
-
-		//printf("fsize is %u \n",fsize);
-		*fcontent = new unsigned char[fsize + 1];
-		fread(*fcontent, 1, fsize, fp);
-		(*fcontent)[fsize] = '\0';
-
-		fclose(fp);
-	} else {
-		perror("file doesn't exist \n");
-		return 0;
-	}
-	return fsize + 1;
 }
 
 int send_hello_msg(int sock) {
@@ -74,13 +49,16 @@ int analyze_message(unsigned char* buf)
 	return 0;
 }
 
+unsigned int divide_upper(unsigned int dividend, unsigned int divisor)
+{
+    return 1 + ((dividend - 1) / divisor);
+}
+
 int main(int argc, char **argv)
 {
 	ERR_load_crypto_strings();
 
 	int sd;
-	unsigned char *buffer_file = NULL;
-	unsigned int file_len = 0;
 	uint16_t server_port;
 
 	my_buffer my_buff;
@@ -100,8 +78,6 @@ int main(int argc, char **argv)
 	recv_data(sd,&my_buff);
 	analyze_message(my_buff.buf);
 
-	// leggo l contenuto del file da inviare
-	file_len = readcontent(argv[1],&buffer_file);
 
 	EncryptSession ss("keys/rsa_server_pubkey.pem");
 
@@ -112,30 +88,54 @@ int main(int argc, char **argv)
 	send_data(sd, session_key, session_key_len);
 	send_data(sd, iv, EVP_CIPHER_iv_length(EVP_aes_128_cbc()));
 
-	unsigned char *ciphertext = new unsigned char[file_len + 16];
-	unsigned char *partial_ciphertext;
-	unsigned int cipherlen = ss.encrypt(buffer_file, file_len, &partial_ciphertext);
-	memcpy(ciphertext, partial_ciphertext, cipherlen);
-	delete partial_ciphertext;
+	// getting file size
+	FILE *fp;
+	unsigned int filesize = open_file_r(argv[1], &fp);
+	unsigned int chunk_count = divide_upper(filesize, CHUNK_SIZE);
+	printf("File size = %u, Chunk size = %d, Chunk count = %d\n", filesize, CHUNK_SIZE, chunk_count);
 
-	int outlen = ss.encrypt_end(&partial_ciphertext);
-	memcpy(ciphertext + cipherlen, partial_ciphertext, outlen);
-	cipherlen += outlen;
-	delete partial_ciphertext;
-
-
-	send_file_msg s_msg = {SEND_FILE, cipherlen, 1};
-	printf("Manderò %d chunk di dimensione:%d \n",s_msg.chunk_number,s_msg.chunk_size);
+	// send to server chunk transfer details
+	send_file_msg s_msg = {SEND_FILE, CHUNK_SIZE, chunk_count};
 	convert_to_network_order(&s_msg);
 	send_data(sd, (unsigned char*)&s_msg, sizeof(s_msg));
-	send_data(sd, ciphertext, cipherlen);
+
+	unsigned char datachunk[CHUNK_SIZE];
+	for(unsigned int i=0; i<chunk_count; i++)
+	{
+		// read next chunk from file
+		unsigned int chunk_plainlen = fread(datachunk, 1, CHUNK_SIZE, fp);
+		printf("encrypting chunk of %d plaintext bytes\n", chunk_plainlen);
+
+		// do encryption
+		unsigned char *chunk_ciphertext;
+		unsigned int chunk_cipherlen = ss.encrypt(datachunk, chunk_plainlen, &chunk_ciphertext);
+
+		// send encrypted data
+		printf("sending chunk of %d bytes\n", chunk_cipherlen);
+		send_data(sd, chunk_ciphertext, chunk_cipherlen);
+		delete chunk_ciphertext;
+
+		// if last chunk
+		if(i==chunk_count-1)
+		{
+			// compute padding
+			unsigned char *padding_ciphertext;
+			unsigned int padding_cipherlen;
+			padding_cipherlen = ss.encrypt_end(&padding_ciphertext);
+
+			// send padding
+			printf("sending padding of %d bytes\n", padding_cipherlen);
+			send_data(sd, padding_ciphertext, padding_cipherlen);
+			delete padding_ciphertext;
+		}
+	}
 
 	printf("session_key: ");
 	print_hex(session_key, session_key_len);
 	printf("iv: ");
 	print_hex(iv, EVP_CIPHER_iv_length(EVP_aes_128_cbc()));
-	printf("ciphertext: ");
-	print_hex(ciphertext, cipherlen);
+	//printf("ciphertext: ");
+	//print_hex(ciphertext, cipherlen);
 
 	close(sd);
 

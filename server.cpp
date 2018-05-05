@@ -85,14 +85,11 @@ int main(int argc, char** argv)
 	my_buff.buf = NULL;
 	my_buff.size = 0;
 	send_file_msg s_msg;
-	int res;
 
-	unsigned char *plaintext;
 	unsigned char *encrypted_key;
 	unsigned int encrypted_key_len;
 	unsigned char *iv;
-	unsigned char *ciphertext;
-	unsigned int cipherlen=0, iv_len=0;
+	unsigned int iv_len=0;
 
 	if( argc < 2 ){
 		printf("use: ./server port");
@@ -114,7 +111,7 @@ int main(int argc, char** argv)
 	if( encrypted_key == NULL ) {
 		printf("Cannot allocate encrypted_key\n");
 		err = -1;
-		goto finalize;
+		return err;
 	}
 	memcpy(encrypted_key, my_buff.buf, encrypted_key_len);
 
@@ -124,40 +121,46 @@ int main(int argc, char** argv)
 	if( iv == NULL ) {
 		printf("Cannot allocate iv \n");
 		err = -1;
-		goto finalize;
+		return err;
 	}
 
 	memcpy(iv, my_buff.buf, iv_len);
 
-	res = recv_data(cl_sd, &my_buff);
-	printf("res=%d sizeof=%d\n",res,sizeof(s_msg));
+	int res = recv_data(cl_sd, &my_buff);
 	memcpy(&s_msg,my_buff.buf,sizeof(s_msg));
 	convert_to_host_order(&s_msg);
 	printf("Riceverò %d chunk di dimensione:%d \n",s_msg.chunk_number,s_msg.chunk_size);
 
-	cipherlen = recv_data(cl_sd, &my_buff);
-	ciphertext = new unsigned char[cipherlen];
-	if( ciphertext == NULL ) {
-		printf("Cannot allocate ciphertext \n");
-		err = -1;
-		goto finalize;
+	DecryptSession ds("keys/rsa_server_privkey.pem", encrypted_key, encrypted_key_len, iv);
+
+	FILE *fp;
+	open_file_w("ricevuto.txt", &fp);
+
+	unsigned int total_plainlen = 0;
+	for(unsigned int i=0; i < s_msg.chunk_number; i++)
+	{
+		// initialize receive buffer
+		my_buffer chunk_cipher;
+		chunk_cipher.buf = NULL;
+		chunk_cipher.size = 0;
+
+		// get chunk from tcp socket
+		unsigned int chunk_cipherlen = recv_data(cl_sd, &chunk_cipher);
+		printf("encrypting chunk(%d) of %d ciphertext bytes\n", s_msg.chunk_number, chunk_cipherlen);
+
+		// do decryption
+		unsigned char* chunk_plaintext;
+		unsigned int chunk_plainlen = ds.decrypt(chunk_cipher.buf, chunk_cipherlen, &chunk_plaintext);
+		total_plainlen += chunk_plainlen;
+
+		// if latest chunk, compute padding
+		if(i == chunk_cipherlen)
+		{
+			unsigned padding_plainlen = ds.decrypt_end(chunk_cipher.buf, chunk_plainlen);
+			chunk_plainlen += padding_plainlen;
+			total_plainlen += padding_plainlen;
+		}
+
+		fwrite(chunk_plaintext, 1, chunk_plainlen, fp);
 	}
-	memcpy(ciphertext, my_buff.buf, cipherlen);
-
-//	printf("Alloco plaintext di %d byte \n",ciph_len);
-	plaintext = new unsigned char[cipherlen];
-	if( plaintext == NULL ) {
-		printf("Cannot allocate plaintext \n");
-		err = -1;
-		goto finalize;
-	}
-
-	decrypt(encrypted_key, encrypted_key_len, iv, "keys/rsa_server_privkey.pem", ciphertext, cipherlen, &plaintext);
-	printf("plaintext: %s\n",plaintext);
-
-finalize:
-	close(cl_sd);
-	close(sd);
-
-	return err;
 }

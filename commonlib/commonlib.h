@@ -17,6 +17,7 @@
 #include <openssl/rand.h>
 #include <openssl/err.h>
 
+#define CHUNK_SIZE 32
 #define HMAC_LENGTH 32
 
 
@@ -68,6 +69,9 @@ public:
 
 // Utils
 void print_hex(unsigned char* buff, unsigned int size);
+
+unsigned int open_file_r(const char *filename, FILE **fp);
+void open_file_w(const char *filename, FILE **fp);
 
 // Server functions
 int initialize_server_socket(const char * bind_addr, int port);
