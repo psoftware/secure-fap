@@ -126,44 +126,27 @@ void decrypt_antonio(int connected_client_fd)
 	printf("Text: %s\n", plaintext);
 }*/
 
-int decrypt(unsigned char *encrypted_key, 
-	unsigned int encrypted_key_len, 
-	unsigned char *iv, 
-	EVP_PKEY *privkey, 
-	unsigned char *ciphertext, 
-	unsigned int cipherlen, 
+int decrypt(
+	unsigned char *encrypted_key, unsigned int encrypted_key_len,
+	unsigned char *iv,
+	EVP_PKEY *privkey,
+	unsigned char *ciphertext, unsigned int cipherlen,
 	unsigned char **plaintext)
 {
-	EVP_CIPHER_CTX *ctx = new EVP_CIPHER_CTX;
-	if( ctx == NULL ){
-		printf("Error allocate EVP_CIPHER_CTX \n");
-		return 0;
-	}
-	
-	int outlen = 0, plainlen = 0;
-	int evp_res = EVP_OpenInit(ctx, EVP_aes_128_cbc(), encrypted_key, encrypted_key_len, iv, privkey);
-	if(evp_res == 0) {
-		printf("EVP_OpenInit Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
-		return 0;
-	}
+	printf("encrypted_key: ");
+	print_hex(encrypted_key, encrypted_key_len);
+	printf("iv: ");
+	print_hex(iv, EVP_CIPHER_iv_length(EVP_aes_128_cbc()));
+	printf("ciphertext: ");
+	print_hex(ciphertext, cipherlen);
 
-	evp_res = EVP_OpenUpdate(ctx, *plaintext, &outlen, ciphertext, cipherlen);
-	if(evp_res == 0) {
-		printf("EVP_OpenUpdate Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
-		return 0;
-	}
-	
-	plainlen = outlen;
-	evp_res = EVP_OpenFinal(ctx, *plaintext + plainlen, &outlen);
-	if(evp_res == 0) {
-		printf("EVP_OpenFinal Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
-		return 0;
-	}
+	DecryptSession ds("keys/rsa_server_privkey.pem", encrypted_key, encrypted_key_len, iv);
+	unsigned char* received_plaintext;
+	unsigned int plainlen = ds.decrypt(ciphertext, cipherlen, &received_plaintext);
+	printf("cipherlen %u plainlen %u\n", cipherlen, plainlen);
+	plainlen += ds.decrypt_end(received_plaintext, plainlen);
 
-	plainlen += outlen;
-
-	EVP_CIPHER_CTX_cleanup(ctx);
-	free(ctx);
+	memcpy(*plaintext, received_plaintext, plainlen);
 
 	return plainlen;
 }
@@ -182,8 +165,11 @@ int analyze_message(unsigned char* buf)
 
 	return 0;
 }
+
 int main(int argc, char** argv)
 {
+	ERR_load_crypto_strings();
+
 	int err = 0;
 	uint16_t server_port;
 	ConnectionTCP conn;
@@ -261,7 +247,7 @@ int main(int argc, char** argv)
 
 	decrypt(encrypted_key,encrypted_key_len,iv,privkey,ciphertext,cipherlen,&plaintext);
 
-	//printf("plaintext:%s\n",plaintext);
+	printf("plaintext: %s\n",plaintext);
 
 finalize:
 	close(cl_sd);

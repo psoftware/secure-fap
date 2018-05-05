@@ -90,22 +90,14 @@ int analyze_message(unsigned char* buf)
 	return 0;
 }
 
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
+	ERR_load_crypto_strings();
+
 	int sd;
 	unsigned char *buffer_file = NULL;
 	unsigned int file_len = 0;
 	uint16_t server_port;
-
-	unsigned char *ciphertext;
-	EVP_CIPHER_CTX *ctx;
-	int outlen=0, cipherlen = 0;
-	unsigned char *iv;
-
-	unsigned char* encrypted_keys[1];
-	int encrypted_keys_len[1];
-	EVP_PKEY* pubkeys[1];
-	int evp_res;
 
 	my_buffer my_buff;
 	my_buff.buf = NULL;
@@ -127,46 +119,35 @@ int main(int argc, char **argv)
 	// leggo l contenuto del file da inviare
 	file_len = readcontent(argv[1],&buffer_file);
 
-	if( !read_pub_key("keys/rsa_server_pubkey.pem",pubkeys) ){
-		printf("Cannot read public key file\n");
-		return -1;
-	}
+	EncryptSession ss("keys/rsa_server_pubkey.pem");
 
-	encrypted_keys_len[0] = EVP_PKEY_size(pubkeys[0]);
-	encrypted_keys[0] = new unsigned char[encrypted_keys_len[0]];
-	ciphertext = new unsigned char[file_len + 16];
+	unsigned char *iv = ss.get_iv();
+	unsigned char *session_key;
+	unsigned int session_key_len = ss.get_session_key(&session_key);
 
-	ctx = new EVP_CIPHER_CTX;
-	iv = new unsigned char[EVP_CIPHER_iv_length(EVP_aes_128_cbc())];
-	if( iv == NULL ){
-		printf("Cannot allocate iv \n");
-		return -1;
-	}
-	evp_res = EVP_SealInit(ctx, EVP_aes_128_cbc(), encrypted_keys, encrypted_keys_len, iv, pubkeys, 1);
-	if(evp_res == 0)
-		printf("EVP_SealInit Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
+	send_data(sd, session_key, session_key_len);
+	send_data(sd, iv, EVP_CIPHER_iv_length(EVP_aes_128_cbc()));
 
-	evp_res = EVP_SealUpdate(ctx, ciphertext, &outlen, (unsigned char*)buffer_file, file_len);
-	if(evp_res == 0)
-		printf("EVP_SealUpdate Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
+	unsigned char *ciphertext = new unsigned char[file_len + 16];
+	unsigned char *partial_ciphertext;
+	unsigned int cipherlen = ss.encrypt(buffer_file, file_len, &partial_ciphertext);
+	memcpy(ciphertext, partial_ciphertext, cipherlen);
+	delete partial_ciphertext;
 
-	cipherlen = outlen;
-	evp_res = EVP_SealFinal(ctx, ciphertext+cipherlen, &outlen);
-	if(evp_res == 0)
-		printf("EVP_SealFinal Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
-
+	int outlen = ss.encrypt_end(&partial_ciphertext);
+	memcpy(ciphertext + cipherlen, partial_ciphertext, outlen);
 	cipherlen += outlen;
+	delete partial_ciphertext;
 
-	printf("encrypted_keys_len:%d\n",encrypted_keys_len[0]);
-	send_data(sd,encrypted_keys[0], encrypted_keys_len[0]);
-	//printf("encrypted_keys:%20s\n",encrypted_keys[0]);
-	printf("iv_len:%d\n",EVP_CIPHER_iv_length(EVP_aes_128_cbc()));
-	send_data(sd,iv,EVP_CIPHER_iv_length(EVP_aes_128_cbc()));
-	//printf("cipherlen:%d\n\n",cipherlen);
- 	send_data(sd,ciphertext,cipherlen);
+	send_data(sd, ciphertext, cipherlen);
 
- 	EVP_CIPHER_CTX_cleanup(ctx);
-	free(ctx);
+	printf("session_key: ");
+	print_hex(session_key, session_key_len);
+	printf("iv: ");
+	print_hex(iv, EVP_CIPHER_iv_length(EVP_aes_128_cbc()));
+	printf("ciphertext: ");
+	print_hex(ciphertext, cipherlen);
+
 	close(sd);
 
 	return 0;
