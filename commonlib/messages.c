@@ -16,7 +16,6 @@ void convert_to_network_order( void* msg )
 		case AUTHENTICATION_OK:
 		case AUTHENTICATION_FAILED:
 		case LIST_FILE:
-		case SEND_FILE:
 		case QUIT_SESSION:
 			((simple_msg*)msg)->t = htonl(((simple_msg*)msg)->t);
 			break;
@@ -24,6 +23,11 @@ void convert_to_network_order( void* msg )
 		case SERVER_HELLO:
 			((hello_msg*)msg)->t = htonl(((hello_msg*)msg)->t);
 			((hello_msg*)msg)->nonce = HTONLL(((hello_msg*)msg)->nonce);
+			break;
+		case SEND_FILE:
+			((send_file_msg*)msg)->t = htonl(((send_file_msg*)msg)->t);
+			((send_file_msg*)msg)->chunk_size = htonl(((send_file_msg*)msg)->chunk_size);
+			((send_file_msg*)msg)->chunk_number = htonl(((send_file_msg*)msg)->chunk_number);
 			break;
 		default:
 			break;
@@ -46,12 +50,15 @@ void convert_to_host_order( void* msg )
 		case AUTHENTICATION_OK:
 		case AUTHENTICATION_FAILED:
 		case LIST_FILE:
-		case SEND_FILE:
 		case QUIT_SESSION:
 			break;
 		case CLIENT_HELLO:
 		case SERVER_HELLO:
 			((hello_msg*)msg)->nonce = NTOHLL(((hello_msg*)msg)->nonce);
+			break;
+		case SEND_FILE:
+			((send_file_msg*)msg)->chunk_size = ntohl(((send_file_msg*)msg)->chunk_size);
+			((send_file_msg*)msg)->chunk_number = ntohl(((send_file_msg*)msg)->chunk_number);
 			break;
 		default:
 			break;
