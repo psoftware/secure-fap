@@ -47,7 +47,7 @@ unsigned int hmac_compute(unsigned char *inputdata[], unsigned int inputdata_len
 
 	// cleanup
 	HMAC_CTX_cleanup(hmac_ctx);
-	free(hmac_ctx);
+	delete hmac_ctx;
 
 	//NB: The HMAC_Init(), HMAC_Update(), HMAC_Final(), and HMAC_cleanup() do not return values.
 
@@ -127,7 +127,7 @@ unsigned int EncryptSession::encrypt_end(unsigned char **partial_ciphertext)
 EncryptSession::~EncryptSession()
 {
 	EVP_CIPHER_CTX_cleanup(ctx);
-	free(ctx);
+	delete ctx;
 
 	delete iv;
 	delete encrypted_keys[0];
@@ -190,7 +190,7 @@ unsigned int DecryptSession::decrypt_end(unsigned char *latest_partial_plaintext
 DecryptSession::~DecryptSession()
 {
 	EVP_CIPHER_CTX_cleanup(ctx);
-	free(ctx);
+	delete ctx;
 
 	delete prvkey;
 }
