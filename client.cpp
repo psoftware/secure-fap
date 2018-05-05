@@ -26,22 +26,6 @@ uint64_t generate_nonce()
 	return nonce;
 }
 
-bool read_pub_key(const char *filename, EVP_PKEY** pubkeys)
-{
-        //EVP_PKEY* pubkeys[1];
-        FILE* file = fopen(filename, "r");
-
-        if(file == NULL)
-                return false;
-
-        pubkeys[0] = PEM_read_PUBKEY(file, NULL, NULL, NULL);
-        if(pubkeys[0] == NULL)
-                return false;
-
-        fclose(file);
-        return true;
-}
-
 unsigned int readcontent(const char *filename, unsigned char** fcontent)
 {
 	unsigned int fsize = 0;
