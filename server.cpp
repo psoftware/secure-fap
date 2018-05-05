@@ -129,7 +129,7 @@ void decrypt_antonio(int connected_client_fd)
 int decrypt(
 	unsigned char *encrypted_key, unsigned int encrypted_key_len,
 	unsigned char *iv,
-	EVP_PKEY *privkey,
+	const char *privkey_path,
 	unsigned char *ciphertext, unsigned int cipherlen,
 	unsigned char **plaintext)
 {
@@ -140,7 +140,7 @@ int decrypt(
 	printf("ciphertext: ");
 	print_hex(ciphertext, cipherlen);
 
-	DecryptSession ds("keys/rsa_server_privkey.pem", encrypted_key, encrypted_key_len, iv);
+	DecryptSession ds(privkey_path, encrypted_key, encrypted_key_len, iv);
 	unsigned char* received_plaintext;
 	unsigned int plainlen = ds.decrypt(ciphertext, cipherlen, &received_plaintext);
 	printf("cipherlen %u plainlen %u\n", cipherlen, plainlen);
@@ -183,7 +183,6 @@ int main(int argc, char** argv)
 	unsigned char *iv;
 	unsigned char *ciphertext;
 	unsigned int cipherlen=0, iv_len=0;
-	EVP_PKEY *privkey;
 
 	if( argc < 2 ){
 		printf("use: ./server port");
@@ -191,13 +190,6 @@ int main(int argc, char** argv)
 	}
 
 	sscanf(argv[1],"%hd",&server_port);
-
-	
-	bool r = read_prv_key("keys/rsa_server_privkey.pem", &privkey);
-	if( !r ){
-		printf("Errore lettura chiave privata\n");
-		return -1;
-	}
 
 	int sd = open_tcp_server(server_port);
 	int cl_sd = accept_tcp_server(sd,&conn);
@@ -245,7 +237,7 @@ int main(int argc, char** argv)
 		goto finalize;
 	}
 
-	decrypt(encrypted_key,encrypted_key_len,iv,privkey,ciphertext,cipherlen,&plaintext);
+	decrypt(encrypted_key, encrypted_key_len, iv, "keys/rsa_server_privkey.pem", ciphertext, cipherlen, &plaintext);
 
 	printf("plaintext: %s\n",plaintext);
 
