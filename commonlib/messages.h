@@ -33,6 +33,13 @@ typedef struct hello_msg_t
 	uint64_t nonce; 
 }__attribute__((packed)) hello_msg;
 
+typedef struct send_file_msg_t
+{
+	message_type t;
+	uint32_t chunk_size;
+	uint32_t chunk_number;
+}__attribute__((packed)) send_file_msg;
+
 typedef struct client_authentication_t
 {
 	message_type t;
