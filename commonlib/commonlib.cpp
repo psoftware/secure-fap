@@ -263,7 +263,7 @@ unsigned int SymmetricCipher::encrypt_end(unsigned char **partial_ciphertext)
 {
 	// padding size is almost 16 (aes block size) 
 	// controllare. Questa classe supporta diversi cipher
-	*partial_ciphertext = new unsigned char[16];
+	*partial_ciphertext = new unsigned char[EVP_CIPHER_block_size(type)];
 
 	int outlen;
 	int evp_res = EVP_EncryptFinal(ctx, *partial_ciphertext, &outlen);
@@ -276,7 +276,7 @@ unsigned int SymmetricCipher::encrypt_end(unsigned char **partial_ciphertext)
 unsigned int SymmetricCipher::decrypt(unsigned char *partial_ciphertext, unsigned int partial_cipherlen, unsigned char **partial_plaintext)
 {
 	// bisogna tenere conto della dimensione del blocco in base al cipher scelto
-	*partial_plaintext = new unsigned char[partial_cipherlen + 16]; // CONTROLLARE!!!!!!
+	*partial_plaintext = new unsigned char[partial_cipherlen + EVP_CIPHER_block_size(type)]; // CONTROLLARE!!!!!!
 
 	int outlen;
 	int evp_res = EVP_DecryptUpdate(ctx, *partial_plaintext, &outlen, partial_ciphertext, partial_cipherlen);
