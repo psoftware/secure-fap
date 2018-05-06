@@ -67,6 +67,23 @@ public:
 	~DecryptSession();
 };
 
+
+class SymmetricCipher {
+private:
+	EVP_CIPHER_CTX* ctx;
+	EVP_CIPHER *type;
+	unsigned char *key;
+	unsigned char *iv;
+public:
+	SymmetricCipher(const EVP_CIPHER *type, const unsigned char *key, const unsigned char *iv);
+	~SymmetricCipher();
+
+	unsigned int encrypt(unsigned char *sourcedata, unsigned int sourcedata_len, unsigned char **partial_ciphertext);
+	unsigned int encrypt_end(unsigned char **partial_ciphertext);
+	unsigned int decrypt(unsigned char *partial_ciphertext, unsigned int partial_cipherlen, unsigned char **partial_plaintext);
+	unsigned int decrypt_end(unsigned char *latest_partial_plaintext);
+};
+
 // Utils
 void print_hex(unsigned char* buff, unsigned int size);
 
