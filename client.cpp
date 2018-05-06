@@ -113,7 +113,7 @@ int main(int argc, char **argv)
 		// send encrypted data
 		printf("sending chunk of %d bytes\n", chunk_cipherlen);
 		send_data(sd, chunk_ciphertext, chunk_cipherlen);
-		delete chunk_ciphertext;
+		delete[] chunk_ciphertext;
 
 		// if last chunk
 		if(i==chunk_count-1)
@@ -126,7 +126,7 @@ int main(int argc, char **argv)
 			// send padding
 			printf("sending padding of %d bytes\n", padding_cipherlen);
 			send_data(sd, padding_ciphertext, padding_cipherlen);
-			delete padding_ciphertext;
+			delete[] padding_ciphertext;
 		}
 	}
 
