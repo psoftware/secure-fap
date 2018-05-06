@@ -34,31 +34,6 @@ int send_hello_msg(int sock) {
 	return send_data(sock,(unsigned char*)&h, sizeof(h));
 }
 
-int decrypt(
-	unsigned char *encrypted_key, unsigned int encrypted_key_len,
-	unsigned char *iv,
-	const char *privkey_path,
-	unsigned char *ciphertext, unsigned int cipherlen,
-	unsigned char **plaintext)
-{
-	printf("encrypted_key: ");
-	print_hex(encrypted_key, encrypted_key_len);
-	printf("iv: ");
-	print_hex(iv, EVP_CIPHER_iv_length(EVP_aes_128_cbc()));
-	printf("ciphertext: ");
-	print_hex(ciphertext, cipherlen);
-
-	DecryptSession ds(privkey_path, encrypted_key, encrypted_key_len, iv);
-	unsigned char* received_plaintext;
-	unsigned int plainlen = ds.decrypt(ciphertext, cipherlen, &received_plaintext);
-	printf("cipherlen %u plainlen %u\n", cipherlen, plainlen);
-	plainlen += ds.decrypt_end(received_plaintext, plainlen);
-
-	memcpy(*plaintext, received_plaintext, plainlen);
-
-	return plainlen;
-}
-
 int analyze_message(unsigned char* buf)
 {
 	convert_to_host_order(buf);
