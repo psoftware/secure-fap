@@ -70,7 +70,8 @@ public:
 
 class SymmetricCipher {
 private:
-	EVP_CIPHER_CTX *ctx;
+	EVP_CIPHER_CTX* encrypt_ctx;
+	EVP_CIPHER_CTX* decrypt_ctx;
 	EVP_CIPHER *type;
 	unsigned char *key;
 	unsigned char *iv;
