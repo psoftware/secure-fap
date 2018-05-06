@@ -221,7 +221,7 @@ DecryptSession::~DecryptSession()
 	delete prvkey;
 }
 
-SymmetricCipher::SymmetricCipher(const EVP_CIPHER *type, const unsigned char *key, const unsigned char *iv)
+SymmetricCipher::SymmetricCipher(const EVP_CIPHER *type, const unsigned char *key, const unsigned char *iv) : iv(NULL)
 {
 	encrypt_ctx = new EVP_CIPHER_CTX;
 	EVP_CIPHER_CTX_init(encrypt_ctx);
