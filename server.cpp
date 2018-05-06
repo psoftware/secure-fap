@@ -145,7 +145,7 @@ int main(int argc, char** argv)
 	{
 		// get chunk from tcp socket
 		unsigned int chunk_cipherlen = recv_data(cl_sd, &chunk_cipher);
-		printf("encrypting chunk(%d) of %d ciphertext bytes\n", s_msg.chunk_number, chunk_cipherlen);
+		printf("decrypting chunk(%d) of %d ciphertext bytes\n", s_msg.chunk_number, chunk_cipherlen);
 
 		// do decryption
 		unsigned char* chunk_plaintext;
@@ -158,6 +158,7 @@ int main(int argc, char** argv)
 			unsigned padding_plainlen = ds.decrypt_end(chunk_cipher.buf, chunk_plainlen);
 			chunk_plainlen += padding_plainlen;
 			total_plainlen += padding_plainlen;
+			printf("removing padding of %d bytes\n", padding_plainlen);
 		}
 
 		fwrite(chunk_plaintext, 1, chunk_plainlen, fp);
