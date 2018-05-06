@@ -111,7 +111,7 @@ int main(int argc, char **argv)
 		unsigned int chunk_cipherlen = ss.encrypt(datachunk, chunk_plainlen, &chunk_ciphertext);
 
 		// send encrypted data
-		printf("sending chunk of %d bytes\n", chunk_cipherlen);
+		printf("sending chunk(%d) of %d bytes\n", i, chunk_cipherlen);
 		send_data(sd, chunk_ciphertext, chunk_cipherlen);
 		delete[] chunk_ciphertext;
 

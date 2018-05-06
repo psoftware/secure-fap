@@ -145,7 +145,7 @@ int main(int argc, char** argv)
 	{
 		// get chunk from tcp socket
 		unsigned int chunk_cipherlen = recv_data(cl_sd, &chunk_cipher);
-		printf("decrypting chunk(%d) of %d ciphertext bytes\n", s_msg.chunk_number, chunk_cipherlen);
+		printf("decrypting chunk(%d) of %d ciphertext bytes\n", i, chunk_cipherlen);
 
 		// do decryption
 		unsigned char* chunk_plaintext;
