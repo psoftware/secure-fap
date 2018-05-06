@@ -2,7 +2,8 @@
 #include <iostream>
 
 using namespace std;
-#define CHUNK_SIZE 32
+#undef CHUNK_SIZE 
+#define CHUNK_SIZE 64
 
 unsigned int divide_upper(unsigned int dividend, unsigned int divisor)
 {
@@ -33,5 +34,6 @@ int main(int argc, char **argv)
 	print_hex(plaintext_1, chunk_plainlen);
 	printf("------------------\n");
 
+	printf("confronto key:%d \n",memcmp(key,sc.get_key(),16));
 	return 0;
 }
