@@ -230,6 +230,9 @@ SymmetricCipher::SymmetricCipher(const EVP_CIPHER *type, const unsigned char *ke
 	memcpy(this->type,type,sizeof(EVP_CIPHER));
 	this->key = new unsigned char[EVP_CIPHER_key_length(type)];
 	memcpy(this->key,key,EVP_CIPHER_key_length(type));
+
+	//printf("key_length:%d \n",EVP_CIPHER_key_length(type));
+
 	if( iv != NULL) {
 		this->iv = new unsigned char[EVP_CIPHER_iv_length(type)];
 		memcpy(this->iv,iv,EVP_CIPHER_iv_length(type));
@@ -301,4 +304,9 @@ unsigned int SymmetricCipher::decrypt_end(unsigned char *latest_partial_plaintex
 unsigned char* SymmetricCipher::get_iv()
 {
 	return this->iv;
+}
+
+unsigned char* SymmetricCipher::get_key()
+{
+	return this->key;
 }
