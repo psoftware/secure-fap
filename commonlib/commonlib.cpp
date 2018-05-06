@@ -204,10 +204,10 @@ unsigned int DecryptSession::decrypt(unsigned char *partial_ciphertext, unsigned
 	return (unsigned int)outlen;
 }
 
-unsigned int DecryptSession::decrypt_end(unsigned char *latest_partial_plaintext, unsigned int latest_partial_plainlen)
+unsigned int DecryptSession::decrypt_end(unsigned char *latest_partial_plaintext)
 {
 	int outlen;
-	int evp_res = EVP_OpenFinal(ctx, latest_partial_plaintext + latest_partial_plainlen, &outlen);
+	int evp_res = EVP_OpenFinal(ctx, latest_partial_plaintext, &outlen);
 	if(evp_res == 0)
 		printf("EVP_OpenFinal Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
 

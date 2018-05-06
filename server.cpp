@@ -127,15 +127,19 @@ int main(int argc, char** argv)
 		unsigned int chunk_plainlen = ds.decrypt(chunk_cipher.buf, chunk_cipherlen, &chunk_plaintext);
 		total_plainlen += chunk_plainlen;
 
+		// write to file
+		fwrite(chunk_plaintext, 1, chunk_plainlen, fp);
+
 		// if latest chunk, compute padding
 		if(i == s_msg.chunk_number-1)
 		{
-			unsigned padding_plainlen = ds.decrypt_end(chunk_cipher.buf, chunk_plainlen);
-			chunk_plainlen += padding_plainlen;
+			unsigned char padding_plaintext[16];
+			unsigned padding_plainlen = ds.decrypt_end(padding_plaintext);
 			total_plainlen += padding_plainlen;
-			printf("removing padding of %d bytes\n", padding_plainlen);
-		}
+			printf("adding last padded block of %d bytes\n", padding_plainlen);
 
-		fwrite(chunk_plaintext, 1, chunk_plainlen, fp);
+			// write latest block (without padding)
+			fwrite(padding_plaintext, 1, padding_plainlen, fp);
+		}
 	}
 }
