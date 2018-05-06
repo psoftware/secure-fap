@@ -156,8 +156,8 @@ EncryptSession::~EncryptSession()
 	EVP_CIPHER_CTX_cleanup(ctx);
 	delete ctx;
 
-	delete iv;
-	delete encrypted_keys[0];
+	delete[] iv;
+	delete[] encrypted_keys[0];
 }
 
 
