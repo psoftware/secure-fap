@@ -194,7 +194,7 @@ DecryptSession::DecryptSession(const char* prvkey_path, unsigned char *session_k
 
 unsigned int DecryptSession::decrypt(unsigned char *partial_ciphertext, unsigned int partial_cipherlen, unsigned char **partial_plaintext)
 {
-	*partial_plaintext = new unsigned char[partial_cipherlen];
+	*partial_plaintext = new unsigned char[partial_cipherlen + 16]; // CONTROLLARE!!!!!!
 
 	int outlen;
 	int evp_res = EVP_OpenUpdate(ctx, *partial_plaintext, &outlen, partial_ciphertext, partial_cipherlen);

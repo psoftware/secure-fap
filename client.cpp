@@ -95,7 +95,7 @@ int main(int argc, char **argv)
 	printf("File size = %u, Chunk size = %d, Chunk count = %d\n", filesize, CHUNK_SIZE, chunk_count);
 
 	// send to server chunk transfer details
-	send_file_msg s_msg = {SEND_FILE, CHUNK_SIZE, chunk_count};
+	send_file_msg s_msg = {SEND_FILE, CHUNK_SIZE, chunk_count + 1};  // +1 for padding
 	convert_to_network_order(&s_msg);
 	send_data(sd, (unsigned char*)&s_msg, sizeof(s_msg));
 
