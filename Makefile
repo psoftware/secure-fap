@@ -1,6 +1,8 @@
-all: client server
+all: client server test
 
 
+test: commonlib/net_wrapper.o commonlib/messages.o commonlib/commonlib.o test.o
+	g++ test.o commonlib/commonlib.o commonlib/net_wrapper.o commonlib/messages.o -o test -lcrypto -g
 
 client: client.o commonlib/net_wrapper.o commonlib/messages.o commonlib/commonlib.o
 	g++ client.o commonlib/commonlib.o commonlib/net_wrapper.o commonlib/messages.o -o client -lcrypto -g
@@ -14,6 +16,8 @@ client.o: client.cpp
 server.o: server.cpp
 	g++ -c -g -Wall server.cpp -o server.o
 
+test.o: test.cpp
+	g++ -c -g -Wall test.cpp -o test.o
 
 commonlib/commonlib.o: commonlib/commonlib.cpp commonlib/commonlib.h
 	g++ -c -g commonlib/commonlib.cpp -o commonlib/commonlib.o

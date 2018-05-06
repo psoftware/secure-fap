@@ -37,7 +37,7 @@ private:
 	int encrypted_keys_len[1];
 
 	bool read_pub_key(const char *filename);
-
+	EncryptSession(const EncryptSession&);
 public:
 	EncryptSession(const char* pubkey_path);
 
@@ -57,7 +57,7 @@ private:
 	EVP_CIPHER_CTX* ctx;
 
 	bool read_prv_key(const char *filename);
-
+	DecryptSession(const DecryptSession&);
 public:
 	DecryptSession(const char* prvkey_path, unsigned char *encrypted_key, unsigned int encrypted_key_len, unsigned char *iv);
 
@@ -74,10 +74,12 @@ private:
 	EVP_CIPHER *type;
 	unsigned char *key;
 	unsigned char *iv;
+	SymmetricCipher(const SymmetricCipher&);
 public:
 	SymmetricCipher(const EVP_CIPHER *type, const unsigned char *key, const unsigned char *iv);
 	~SymmetricCipher();
 
+	unsigned char* get_iv();
 	unsigned int encrypt(unsigned char *sourcedata, unsigned int sourcedata_len, unsigned char **partial_ciphertext);
 	unsigned int encrypt_end(unsigned char **partial_ciphertext);
 	unsigned int decrypt(unsigned char *partial_ciphertext, unsigned int partial_cipherlen, unsigned char **partial_plaintext);

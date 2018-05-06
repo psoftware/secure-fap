@@ -230,8 +230,10 @@ SymmetricCipher::SymmetricCipher(const EVP_CIPHER *type, const unsigned char *ke
 	memcpy(this->type,type,sizeof(EVP_CIPHER));
 	this->key = new unsigned char[EVP_CIPHER_key_length(type)];
 	memcpy(this->key,key,EVP_CIPHER_key_length(type));
-	iv = new unsigned char[EVP_CIPHER_iv_length(type)];
-	memcpy(this->iv,iv,EVP_CIPHER_iv_length(type));
+	if( iv != NULL) {
+		this->iv = new unsigned char[EVP_CIPHER_iv_length(type)];
+		memcpy(this->iv,iv,EVP_CIPHER_iv_length(type));
+	}
 
 	int evp_res = EVP_EncryptInit(ctx, this->type, this->key, this->iv);
 	if(evp_res == 0)
@@ -268,7 +270,7 @@ unsigned int SymmetricCipher::encrypt_end(unsigned char **partial_ciphertext)
 	int outlen;
 	int evp_res = EVP_EncryptFinal(ctx, *partial_ciphertext, &outlen);
 	if(evp_res == 0)
-		printf("EVP_SealFinal Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
+		printf("EVP_EncryptFinal Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
 
 	return outlen;
 }
@@ -294,4 +296,9 @@ unsigned int SymmetricCipher::decrypt_end(unsigned char *latest_partial_plaintex
 		printf("EVP_DecryptFinal Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
 
 	return (unsigned int)outlen;
+}
+
+unsigned char* SymmetricCipher::get_iv()
+{
+	return this->iv;
 }
