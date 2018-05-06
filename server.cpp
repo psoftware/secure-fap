@@ -153,7 +153,7 @@ int main(int argc, char** argv)
 		total_plainlen += chunk_plainlen;
 
 		// if latest chunk, compute padding
-		if(i == chunk_cipherlen)
+		if(i == s_msg.chunk_number-1)
 		{
 			unsigned padding_plainlen = ds.decrypt_end(chunk_cipher.buf, chunk_plainlen);
 			chunk_plainlen += padding_plainlen;
