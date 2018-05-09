@@ -28,7 +28,7 @@ void DynamicArray::appendBytes(unsigned char *new_text, unsigned int new_len)
 	this->max = this->len + new_len;
 	this->len += new_len;
 	this->arr = current_text;
-	printf("base_len = %u base_max = %u\n", this->len, this->max);
+	//printf("base_len = %u base_max = %u\n", this->len, this->max);
 }
 
 unsigned int DynamicArray::getLength() {
@@ -41,8 +41,11 @@ unsigned char* DynamicArray::getArray() {
 
 unsigned char* DynamicArray::detachArray() {
 	unsigned char *res = this->arr;
-	this->arr = 0;
+
+	// regenerate array
+	this->arr = new unsigned char[1];
+	this->max = 1;
 	this->len = 0;
-	this->max = 0;
+
 	return res;
 }
