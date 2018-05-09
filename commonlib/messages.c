@@ -13,6 +13,10 @@ void convert_to_network_order( void* msg )
 		case KEY_CONFIRMATION_SERVER:
 		case KEY_CONFIRMATION_CLIENT:
 		case CLIENT_AUTHENTICATION:
+			//((client_auth*)msg)->t = htonl(((client_auth*)msg)->t); /// PORCA MISERIA, PORCA MISERIA STASERA SE NON MI INCAZZO
+			((client_auth*)msg)->total_ciphertext_size = htonl(((client_auth*)msg)->total_ciphertext_size);
+			((client_auth*)msg)->username_length = htonl(((client_auth*)msg)->username_length);
+			((client_auth*)msg)->password_length = htonl(((client_auth*)msg)->password_length);
 		case AUTHENTICATION_OK:
 		case AUTHENTICATION_FAILED:
 		case LIST_FILE:
@@ -47,6 +51,9 @@ void convert_to_host_order( void* msg )
 		case KEY_CONFIRMATION_SERVER:
 		case KEY_CONFIRMATION_CLIENT:
 		case CLIENT_AUTHENTICATION:
+			((client_auth*)msg)->total_ciphertext_size = ntohl(((client_auth*)msg)->total_ciphertext_size);
+			((client_auth*)msg)->username_length = ntohl(((client_auth*)msg)->username_length);
+			((client_auth*)msg)->password_length = ntohl(((client_auth*)msg)->password_length);
 		case AUTHENTICATION_OK:
 		case AUTHENTICATION_FAILED:
 		case LIST_FILE:
