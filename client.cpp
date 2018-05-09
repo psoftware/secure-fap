@@ -193,30 +193,22 @@ int main(int argc, char **argv)
 
 	SymmetricCipher sc(EVP_aes_128_cbc(), session_key, command_iv);
 
-	// build plaintext to make seqnum|command_str
-	unsigned char *command_concat_str = new unsigned char[sizeof(sr_seq_num) + strlen(command_str) + 1];
-	memcpy(command_concat_str, (unsigned char*)&sr_seq_num, sizeof(sr_seq_num));
-	memcpy(command_concat_str + sizeof(sr_seq_num), (unsigned char*)&command_str, strlen(command_str) + 1);
-
-	// make ciphertext from seqnum|command_str
+	// encrypt sr_seq_num|command_str
+	sc.encrypt((unsigned char*)&sr_seq_num, sizeof(sr_seq_num));
+	sc.encrypt((unsigned char*)command_str, sizeof(command_str) + 1);
+	sc.encrypt_end();
 	unsigned char *command_ciphertext;
-	unsigned int command_cipherlen = sc.encrypt(command_concat_str, sizeof(sr_seq_num) + strlen(command_str) + 1, &command_ciphertext);
-	unsigned char *command_ciphertext_end;
-	unsigned int command_cipherlen_end = sc.encrypt_end(&command_ciphertext_end);
-
-	unsigned char *command_concat_ciphertext = new unsigned char[command_cipherlen + command_cipherlen_end];
-	memcpy(command_concat_ciphertext, command_ciphertext, command_cipherlen);
-	memcpy(command_concat_ciphertext + command_cipherlen, command_ciphertext_end, command_cipherlen_end);
+	unsigned int command_cipherlen = sc.flush_ciphertext(&command_ciphertext);
 
 	// send {seqnum|command_str}_Ksess
-	send_data(sd, command_concat_ciphertext, command_cipherlen + command_cipherlen_end);
+	send_data(sd, command_ciphertext, command_cipherlen);
 
 	// make hmac from {seqnum|command_str}_Ksess
 	unsigned char *hash_result;
 	unsigned int hash_len;
 
 	HMACMaker hc(session_key, 16);
-	hc.hash(command_concat_ciphertext, command_cipherlen + command_cipherlen_end);
+	hc.hash(command_ciphertext, command_cipherlen);
 	hash_len = hc.hash_end(&hash_result);
 
 	// send HMAC_Ksess{ eqnum|command_str}_Ksess }

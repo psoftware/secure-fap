@@ -40,57 +40,79 @@ SymmetricCipher::~SymmetricCipher()
 }
 
 
-unsigned int SymmetricCipher::encrypt(unsigned char *sourcedata, unsigned int sourcedata_len, unsigned char **partial_ciphertext)
+unsigned int SymmetricCipher::encrypt(unsigned char *sourcedata, unsigned int sourcedata_len)
 {
-	*partial_ciphertext = new unsigned char[sourcedata_len];
+	unsigned char *partial_ciphertext = new unsigned char[sourcedata_len];
 
 	int outlen;
-	int evp_res = EVP_EncryptUpdate(encrypt_ctx, *partial_ciphertext, &outlen, sourcedata, sourcedata_len);
+	int evp_res = EVP_EncryptUpdate(encrypt_ctx, partial_ciphertext, &outlen, sourcedata, sourcedata_len);
 	if(evp_res == 0)
 		printf("EVP_EncryptUpdate Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
 
+	this->ciphertext.appendBytes(partial_ciphertext, outlen);
+	delete[] partial_ciphertext;
+
 	return outlen;
 }
-unsigned int SymmetricCipher::encrypt_end(unsigned char **partial_ciphertext)
+unsigned int SymmetricCipher::encrypt_end()
 {
 	// padding size is almost 16 (aes block size) 
 	// controllare. Questa classe supporta diversi cipher
-	*partial_ciphertext = new unsigned char[EVP_CIPHER_block_size(type)];
+	unsigned char *partial_ciphertext = new unsigned char[EVP_CIPHER_block_size(type)];
 
 	int outlen;
-	int evp_res = EVP_EncryptFinal(encrypt_ctx, *partial_ciphertext, &outlen);
+	int evp_res = EVP_EncryptFinal(encrypt_ctx, partial_ciphertext, &outlen);
 	if(evp_res == 0)
 		printf("EVP_EncryptFinal Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
+
+	this->ciphertext.appendBytes(partial_ciphertext, outlen);
+	delete[] partial_ciphertext;
 
 	return outlen;
 }
 
-unsigned int SymmetricCipher::decrypt(unsigned char *partial_ciphertext, unsigned int partial_cipherlen, unsigned char **partial_plaintext)
+unsigned int SymmetricCipher::decrypt(unsigned char *partial_ciphertext, unsigned int partial_cipherlen)
 {
 	// bisogna tenere conto della dimensione del blocco in base al cipher scelto
-	*partial_plaintext = new unsigned char[partial_cipherlen + EVP_CIPHER_block_size(type)]; // CONTROLLARE!!!!!!
+	unsigned char *partial_plaintext = new unsigned char[partial_cipherlen + EVP_CIPHER_block_size(type)]; // CONTROLLARE!!!!!!
 
 	int outlen;
-	int evp_res = EVP_DecryptUpdate(decrypt_ctx, *partial_plaintext, &outlen, partial_ciphertext, partial_cipherlen);
+	int evp_res = EVP_DecryptUpdate(decrypt_ctx, partial_plaintext, &outlen, partial_ciphertext, partial_cipherlen);
 	if(evp_res == 0)
 		printf("EVP_DecryptUpdate Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
 
+	this->plaintext.appendBytes(partial_plaintext, outlen);
+	delete[] partial_plaintext;
+
 	return (unsigned int)outlen;
 }
 
-unsigned int SymmetricCipher::decrypt_end(unsigned char *latest_partial_plaintext)
+unsigned int SymmetricCipher::decrypt_end()
 {
+	unsigned char *partial_plaintext = new unsigned char[16];
 	int outlen;
-	int evp_res = EVP_DecryptFinal(decrypt_ctx, latest_partial_plaintext, &outlen);
+	int evp_res = EVP_DecryptFinal(decrypt_ctx, partial_plaintext, &outlen);
 	if(evp_res == 0)
 		printf("EVP_DecryptFinal Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
 
+	this->plaintext.appendBytes(partial_plaintext, outlen);
+	delete[] partial_plaintext;
+
 	return (unsigned int)outlen;
 }
 
-unsigned char* SymmetricCipher::get_iv()
+unsigned int SymmetricCipher::flush_ciphertext(unsigned char **ciphertext)
 {
-	return this->iv;
+	int size = this->ciphertext.getLength();
+	*ciphertext = this->ciphertext.detachArray();
+	return size;
+}
+
+unsigned int SymmetricCipher::flush_plaintext(unsigned char **plaintext)
+{
+	int size = this->plaintext.getLength();
+	*plaintext = this->plaintext.detachArray();
+	return size;
 }
 
 unsigned char* SymmetricCipher::get_key()

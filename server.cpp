@@ -232,19 +232,17 @@ int main(int argc, char** argv)
 	printf("HMAC authentication success!\n");
 
 	// decrypt {seqnum|command_str}_Ksess
-	unsigned char *command_plaintext;
-	unsigned char command_plaintext_end[16];
 	SymmetricCipher sc(EVP_aes_128_cbc(), session_key, command_iv);
-	int command_plainlen = sc.decrypt(command_ciphertext, command_ciphertext_len, &command_plaintext);
-	int command_plainlen_end = sc.decrypt_end(command_plaintext_end);
-
-	unsigned char *command_concat_plaintext = new unsigned char[command_plainlen + command_plainlen_end];
-	memcpy(command_concat_plaintext, command_plaintext, command_plainlen);
-	memcpy(command_concat_plaintext + command_plainlen, command_plaintext_end, command_plainlen_end);
+	unsigned char *command_plaintext;
+	unsigned int command_plainlen;
+	sc.decrypt(command_ciphertext, command_ciphertext_len);
+	sc.decrypt_end();
+	command_plainlen = sc.flush_plaintext(&command_plaintext);
 
 	// verify sequence number
 	uint64_t received_seqno;
-	memcpy((void*)&received_seqno, command_concat_plaintext, 8);
+	memcpy((void*)&received_seqno, command_plaintext, 8);
+
 	char *command_text = (char*)&command_plaintext[8];
 	unsigned int command_text_len = strlen(command_text); // MUST BE CHECKED!!!
 
