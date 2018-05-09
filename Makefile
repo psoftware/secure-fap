@@ -1,14 +1,12 @@
-all: client server test
+COMMONLIB_OBJ = commonlib/net_wrapper.o commonlib/messages.o commonlib/commonlib.o commonlib/SymmetricCipher.o commonlib/EncryptSession.o commonlib/DecryptSession.o commonlib/SignatureVerifier.o commonlib/SignatureMaker.o
 
+all: client server
 
-test: commonlib/net_wrapper.o commonlib/messages.o commonlib/commonlib.o test.o
-	g++ test.o commonlib/commonlib.o commonlib/net_wrapper.o commonlib/messages.o -o test -lcrypto -g
+client: client.o $(COMMONLIB_OBJ)
+	g++ client.o $(COMMONLIB_OBJ) -o client -lcrypto -g
 
-client: client.o commonlib/net_wrapper.o commonlib/messages.o commonlib/commonlib.o
-	g++ client.o commonlib/commonlib.o commonlib/net_wrapper.o commonlib/messages.o -o client -lcrypto -g
-
-server: server.o commonlib/net_wrapper.o commonlib/messages.o commonlib/commonlib.o
-	g++ server.o commonlib/commonlib.o commonlib/net_wrapper.o commonlib/messages.o -o server -lcrypto -g
+server: server.o $(COMMONLIB_OBJ)
+	g++ server.o $(COMMONLIB_OBJ) -o server -lcrypto -g
 
 client.o: client.cpp
 	g++ -c -g -Wall client.cpp -o client.o
@@ -28,11 +26,20 @@ commonlib/net_wrapper.o: commonlib/net_wrapper.c commonlib/net_wrapper.h
 commonlib/messages.o: commonlib/messages.c commonlib/messages.h
 	gcc -c commonlib/messages.c -o commonlib/messages.o
 
-commonlib/EncryptSession.o: commonlib/EncryptSession.cpp EncryptSession.h
+commonlib/EncryptSession.o: commonlib/EncryptSession.cpp commonlib/EncryptSession.h
 	g++ -c commonlib/EncryptSession.cpp -o commonlib/EncryptSession.o
 
-commonlib/DecryptSession.o: commonlib/DecryptSession.cpp DecryptSession.h
+commonlib/DecryptSession.o: commonlib/DecryptSession.cpp commonlib/DecryptSession.h
 	g++ -c commonlib/DecryptSession.cpp -o commonlib/DecryptSession.o
 
+commonlib/SymmetricCipher.o: commonlib/SymmetricCipher.cpp commonlib/SymmetricCipher.h
+	g++ -c commonlib/SymmetricCipher.cpp -o commonlib/SymmetricCipher.o
+
+commonlib/SignatureVerifier.o: commonlib/SignatureVerifier.cpp commonlib/SignatureVerifier.h
+	g++ -c commonlib/SignatureVerifier.cpp -o commonlib/SignatureVerifier.o
+
+commonlib/SignatureMaker.o: commonlib/SignatureMaker.cpp commonlib/SignatureMaker.h
+	g++ -c commonlib/SignatureMaker.cpp -o commonlib/SignatureMaker.o
+	
 clean:
 	rm -f client server *.o commonlib/*.o
