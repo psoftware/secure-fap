@@ -197,7 +197,7 @@ int main(int argc, char** argv)
 
 	memcpy(iv, my_buff.buf, iv_len);
 
-	int res = recv_data(cl_sd, &my_buff);
+	recv_data(cl_sd, &my_buff);
 	memcpy(&s_msg,my_buff.buf,sizeof(s_msg));
 	convert_to_host_order(&s_msg);
 	printf("Riceverò %d chunk di dimensione:%d \n",s_msg.chunk_number,s_msg.chunk_size);
