@@ -155,16 +155,13 @@ int main(int argc, char **argv)
 
 	// encrypt all
 	unsigned char *auth_ciphertext;
-	unsigned int auth_cipherlen =
-		asymm_authclient_cipher.encrypt(auth_plaintext, auth_plaintext_size, &auth_ciphertext);
-
-	unsigned char *auth_ciphertext_padding;
-	unsigned int auth_cipherlen_padding =
-		asymm_authclient_cipher.encrypt_end(&auth_ciphertext_padding);
+	unsigned int auth_cipherlen;
+	asymm_authclient_cipher.encrypt(auth_plaintext, auth_plaintext_size);
+	asymm_authclient_cipher.encrypt_end();
+	auth_cipherlen = asymm_authclient_cipher.flush_ciphertext(&auth_ciphertext);
 
 	// send client auth header (server needs sizes)
-	client_auth auth_header_msg = {CLIENT_AUTHENTICATION,
-		auth_cipherlen + auth_cipherlen_padding, sizeof(auth_username), sizeof(auth_secret)};
+	client_auth auth_header_msg = {CLIENT_AUTHENTICATION, auth_cipherlen, sizeof(auth_username), sizeof(auth_secret)};
 	printf("client header: ciphertext_len = %u, username_length = %u, password_length = %u\n",
 		auth_header_msg.total_ciphertext_size, auth_header_msg.username_length, auth_header_msg.password_length);
 
@@ -173,7 +170,6 @@ int main(int argc, char **argv)
 
 	// send ciphertext and padded ciphertext
 	send_data(sd, auth_ciphertext, auth_cipherlen);
-	send_data(sd, auth_ciphertext_padding, auth_cipherlen_padding);
 
 	// 5) Waiting for AuthOK or AuthFailed
 	simple_msg auth_response_msg;
@@ -264,7 +260,8 @@ int main(int argc, char **argv)
 
 		// do encryption
 		unsigned char *chunk_ciphertext;
-		unsigned int chunk_cipherlen = ss.encrypt(datachunk, chunk_plainlen, &chunk_ciphertext);
+		ss.encrypt(datachunk, chunk_plainlen);
+		unsigned int chunk_cipherlen = ss.flush_ciphertext(&chunk_ciphertext);
 
 		// send encrypted data
 		printf("sending chunk(%d) of %d bytes\n", i, chunk_cipherlen);
@@ -276,8 +273,8 @@ int main(int argc, char **argv)
 		{
 			// compute padding
 			unsigned char *padding_ciphertext;
-			unsigned int padding_cipherlen;
-			padding_cipherlen = ss.encrypt_end(&padding_ciphertext);
+			ss.encrypt_end();
+			unsigned int padding_cipherlen = ss.flush_ciphertext(&padding_ciphertext);
 
 			// send padding
 			printf("sending padding of %d bytes\n", padding_cipherlen);

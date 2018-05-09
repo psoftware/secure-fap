@@ -12,6 +12,27 @@ unsigned int divide_upper(unsigned int dividend, unsigned int divisor)
 
 int main(int argc, char **argv)
 {
+	DynamicArray arr;
+
+	char msg1[] = "abc1";
+	unsigned int size1 = sizeof(msg1)-1;
+	char msg2[] = "dfghijkl2";
+	unsigned int size2 = sizeof(msg2)-1;
+	char msg3[] = "mnopqrstuvwxyz4";
+	unsigned int size3 = sizeof(msg3)-1;
+	char msg4[] = "56789";
+	unsigned int size4 = sizeof(msg4);
+
+	printf("%s\n", arr.getArray());
+	arr.appendBytes((unsigned char*)msg1, size1);
+	printf("%s\n", arr.getArray());
+	arr.appendBytes((unsigned char*)msg2, size2);
+	printf("%s\n", arr.getArray());
+	arr.appendBytes((unsigned char*)msg3, size3);
+	printf("%s\n", arr.getArray());
+	arr.appendBytes((unsigned char*)msg4, size4);
+	printf("%s\n", arr.getArray());
+return 0;
 	unsigned char key[16];
 	unsigned char plaintext_0[] = "Lorem ipsum dolor sit amet, consectetur adipisci elit, sed eiusmod tempor incidunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam, nisi ut aliquid ex ea commodi consequatur. Quis aute iure reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint obcaecat cupiditat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
 	unsigned char *ciphertext_0;

@@ -45,29 +45,40 @@ unsigned int EncryptSession::get_session_key(unsigned char **session_key)
 	return encrypted_keys_len[0];
 }
 
-unsigned int EncryptSession::encrypt(unsigned char *sourcedata, unsigned int sourcedata_len, unsigned char **partial_ciphertext)
+unsigned int EncryptSession::encrypt(unsigned char *sourcedata, unsigned int sourcedata_len)
 {
-	*partial_ciphertext = new unsigned char[sourcedata_len];
+	unsigned char *partial_ciphertext = new unsigned char[sourcedata_len];
 
 	int outlen;
-	int evp_res = EVP_SealUpdate(ctx, *partial_ciphertext, &outlen, sourcedata, sourcedata_len);
+	int evp_res = EVP_SealUpdate(ctx, partial_ciphertext, &outlen, sourcedata, sourcedata_len);
 	if(evp_res == 0)
 		printf("EVP_SealUpdate Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
+
+	this->ciphertext.appendBytes(partial_ciphertext, outlen);
 
 	return outlen;
 }
 
-unsigned int EncryptSession::encrypt_end(unsigned char **partial_ciphertext)
+unsigned int EncryptSession::encrypt_end()
 {
 	// padding size is almost 16 (aes block size)
-	*partial_ciphertext = new unsigned char[16];
+	unsigned char *partial_ciphertext = new unsigned char[16];
 
 	int outlen;
-	int evp_res = EVP_SealFinal(ctx, *partial_ciphertext, &outlen);
+	int evp_res = EVP_SealFinal(ctx, partial_ciphertext, &outlen);
 	if(evp_res == 0)
 		printf("EVP_SealFinal Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
 
+	this->ciphertext.appendBytes(partial_ciphertext, outlen);
+
 	return outlen;
+}
+
+unsigned int EncryptSession::flush_ciphertext(unsigned char **ciphertext)
+{
+	int size = this->ciphertext.getLength();
+	*ciphertext = this->ciphertext.detachArray();
+	return size;
 }
 
 EncryptSession::~EncryptSession()

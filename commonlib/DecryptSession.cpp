@@ -30,26 +30,38 @@ bool DecryptSession::read_prv_key(const char *filename)
 	return true;
 }
 
-unsigned int DecryptSession::decrypt(unsigned char *partial_ciphertext, unsigned int partial_cipherlen, unsigned char **partial_plaintext)
+unsigned int DecryptSession::decrypt(unsigned char *partial_ciphertext, unsigned int partial_cipherlen)
 {
-	*partial_plaintext = new unsigned char[partial_cipherlen + 16]; // CONTROLLARE!!!!!!
+	unsigned char *partial_plaintext = new unsigned char[partial_cipherlen + 16]; // CONTROLLARE!!!!!!
 
 	int outlen;
-	int evp_res = EVP_OpenUpdate(ctx, *partial_plaintext, &outlen, partial_ciphertext, partial_cipherlen);
+	int evp_res = EVP_OpenUpdate(ctx, partial_plaintext, &outlen, partial_ciphertext, partial_cipherlen);
 	if(evp_res == 0)
 		printf("EVP_OpenUpdate Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
+
+	this->plaintext.appendBytes(partial_plaintext, outlen);
 
 	return (unsigned int)outlen;
 }
 
-unsigned int DecryptSession::decrypt_end(unsigned char *latest_partial_plaintext)
+unsigned int DecryptSession::decrypt_end()
 {
+	unsigned char *latest_partial_plaintext = new unsigned char[16];
 	int outlen;
 	int evp_res = EVP_OpenFinal(ctx, latest_partial_plaintext, &outlen);
 	if(evp_res == 0)
 		printf("EVP_OpenFinal Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
 
+	this->plaintext.appendBytes(latest_partial_plaintext, outlen);
+
 	return (unsigned int)outlen;
+}
+
+unsigned int DecryptSession::flush_plaintext(unsigned char **plaintext)
+{
+	int size = this->plaintext.getLength();
+	*plaintext = this->plaintext.detachArray();
+	return size;
 }
 
 DecryptSession::~DecryptSession()

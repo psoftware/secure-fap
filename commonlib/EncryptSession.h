@@ -7,6 +7,7 @@
 #include <openssl/rand.h>
 #include <openssl/err.h>
 #include "messages.h"
+#include "DynamicArray.h"
 
 class EncryptSession {
 private:
@@ -17,6 +18,8 @@ private:
 	unsigned char *encrypted_keys[1];
 	int encrypted_keys_len[1];
 
+	DynamicArray ciphertext;
+
 	bool read_pub_key(const char *filename);
 	EncryptSession(const EncryptSession&);
 public:
@@ -25,8 +28,9 @@ public:
 	unsigned char *get_iv();
 	unsigned int get_session_key(unsigned char **session_key);
 
-	unsigned int encrypt(unsigned char *sourcedata, unsigned int sourcedata_len, unsigned char **partial_ciphertext);
-	unsigned int encrypt_end(unsigned char **partial_ciphertext);
+	unsigned int encrypt(unsigned char *sourcedata, unsigned int sourcedata_len);
+	unsigned int encrypt_end();
+	unsigned int flush_ciphertext(unsigned char **ciphertext);
 
 	~EncryptSession();
 };

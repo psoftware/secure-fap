@@ -1,4 +1,4 @@
-COMMONLIB_OBJ = commonlib/net_wrapper.o commonlib/messages.o commonlib/commonlib.o commonlib/SymmetricCipher.o commonlib/EncryptSession.o commonlib/DecryptSession.o commonlib/SignatureVerifier.o commonlib/SignatureMaker.o
+COMMONLIB_OBJ = commonlib/net_wrapper.o commonlib/messages.o commonlib/commonlib.o commonlib/SymmetricCipher.o commonlib/EncryptSession.o commonlib/DecryptSession.o commonlib/SignatureVerifier.o commonlib/SignatureMaker.o commonlib/DynamicArray.o
 
 all: client server
 
@@ -40,6 +40,9 @@ commonlib/SignatureVerifier.o: commonlib/SignatureVerifier.cpp commonlib/Signatu
 
 commonlib/SignatureMaker.o: commonlib/SignatureMaker.cpp commonlib/SignatureMaker.h
 	g++ -c commonlib/SignatureMaker.cpp -o commonlib/SignatureMaker.o
-	
+
+commonlib/DynamicArray.o: commonlib/DynamicArray.cpp commonlib/DynamicArray.h
+	g++ -c commonlib/DynamicArray.cpp -o commonlib/DynamicArray.o
+
 clean:
 	rm -f client server *.o commonlib/*.o

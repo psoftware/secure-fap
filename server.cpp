@@ -154,31 +154,14 @@ int main(int argc, char** argv)
 	DecryptSession asymm_authclient_decipher("keys/rsa_server_privkey.pem", auth_encrypted_key, auth_encrypted_key_len, auth_iv);
 
 	// receive ciphertext
+	unsigned int auth_cipherlen = recv_data(cl_sd, &my_buff);
+
+	// decode ciphertext
 	unsigned char *auth_plaintext = new unsigned char[auth_header_msg.total_ciphertext_size];
 	unsigned int auth_plainlen = 0;
-	unsigned char *temp_plaintext;
-	unsigned int temp_plainlen;
-
-	unsigned int auth_cipherlen = recv_data(cl_sd, &my_buff);
-	temp_plainlen = asymm_authclient_decipher.decrypt(my_buff.buf, auth_cipherlen, &temp_plaintext);
-	memcpy(auth_plaintext, temp_plaintext, temp_plainlen);
-	auth_plainlen += temp_plainlen;
-
-	// receive last padded ciphertext
-	unsigned int auth_cipherlen_padding = recv_data(cl_sd, &my_buff);
-	if(auth_cipherlen_padding > 16)
-	{
-		printf("error: auth_cipherlen_padding size too big!\n");
-		return -1;
-	}
-	temp_plainlen = asymm_authclient_decipher.decrypt(my_buff.buf, auth_cipherlen_padding, &temp_plaintext);
-	memcpy(auth_plaintext + auth_plainlen, temp_plaintext, temp_plainlen);
-	auth_plainlen += temp_plainlen;
-
-	unsigned char padding_plaintext[16];
-	temp_plainlen = asymm_authclient_decipher.decrypt_end(padding_plaintext);
-	memcpy(auth_plaintext + auth_plainlen, padding_plaintext, temp_plainlen);
-	auth_plainlen += temp_plainlen;
+	asymm_authclient_decipher.decrypt(my_buff.buf, auth_cipherlen);
+	asymm_authclient_decipher.decrypt_end();
+	auth_plainlen = asymm_authclient_decipher.flush_plaintext(&auth_plaintext);
 
 	// decompose plaintext
 	unsigned int pl_offset = 0;
@@ -327,7 +310,8 @@ int main(int argc, char** argv)
 
 		// do decryption
 		unsigned char* chunk_plaintext;
-		unsigned int chunk_plainlen = ds.decrypt(chunk_cipher.buf, chunk_cipherlen, &chunk_plaintext);
+		ds.decrypt(chunk_cipher.buf, chunk_cipherlen);
+		unsigned int chunk_plainlen = ds.flush_plaintext(&chunk_plaintext);
 		total_plainlen += chunk_plainlen;
 
 		// write to file
@@ -336,8 +320,9 @@ int main(int argc, char** argv)
 		// if latest chunk, compute padding
 		if(i == s_msg.chunk_number-1)
 		{
-			unsigned char padding_plaintext[16];
-			unsigned padding_plainlen = ds.decrypt_end(padding_plaintext);
+			unsigned char *padding_plaintext;
+			ds.decrypt_end();
+			unsigned padding_plainlen = ds.flush_plaintext(&padding_plaintext);
 			total_plainlen += padding_plainlen;
 			printf("adding last padded block of %d bytes\n", padding_plainlen);
 
