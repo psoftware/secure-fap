@@ -28,5 +28,11 @@ commonlib/net_wrapper.o: commonlib/net_wrapper.c commonlib/net_wrapper.h
 commonlib/messages.o: commonlib/messages.c commonlib/messages.h
 	gcc -c commonlib/messages.c -o commonlib/messages.o
 
+commonlib/EncryptSession.o: commonlib/EncryptSession.cpp EncryptSession.h
+	g++ -c commonlib/EncryptSession.cpp -o commonlib/EncryptSession.o
+
+commonlib/DecryptSession.o: commonlib/DecryptSession.cpp DecryptSession.h
+	g++ -c commonlib/DecryptSession.cpp -o commonlib/DecryptSession.o
+
 clean:
 	rm -f client server *.o commonlib/*.o
