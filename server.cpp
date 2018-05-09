@@ -148,10 +148,10 @@ int main(int argc, char** argv)
 	// decompose plaintext
 	unsigned int pl_offset = 0;
 
-	uint64_t received_client_nonce;
-	memcpy(&received_client_nonce, auth_plaintext, 8);
+	uint64_t received_server_nonce;
+	memcpy(&received_server_nonce, auth_plaintext, 8);
 	pl_offset += 8;
-	printf("received_client_nonce = %ld\n", received_client_nonce);
+	printf("received_server_nonce = %ld\n", received_server_nonce);
 
 	unsigned char session_key[16];
 	memcpy(session_key, auth_plaintext + pl_offset, 16);
@@ -172,7 +172,7 @@ int main(int argc, char** argv)
 	// 5) Send Ok/no
 	simple_msg auth_resp_msg;
 
-	if(received_client_nonce != cl_nonce)
+	if(received_server_nonce != sr_nonce)
 	{
 		printf("error: nonces unmatch!\n");
 		auth_resp_msg.t = AUTHENTICATION_FAILED;

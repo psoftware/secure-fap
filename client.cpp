@@ -119,7 +119,7 @@ int main(int argc, char **argv)
 	unsigned char *auth_plaintext = new unsigned char[8 + 16 + sizeof(auth_username) + sizeof(auth_secret)];
 	unsigned int auth_plaintext_size = 0;
 	// client nonce encrypt
-	memcpy(auth_plaintext, (unsigned char*)&cl_nonce, 8);
+	memcpy(auth_plaintext, (unsigned char*)&sr_nonce, 8);
 	auth_plaintext_size += 8;
 	// session key encrypt
 	memcpy(auth_plaintext + auth_plaintext_size, session_key, 16);
