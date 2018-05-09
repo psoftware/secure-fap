@@ -55,6 +55,7 @@ unsigned int EncryptSession::encrypt(unsigned char *sourcedata, unsigned int sou
 		printf("EVP_SealUpdate Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
 
 	this->ciphertext.appendBytes(partial_ciphertext, outlen);
+	delete[] partial_ciphertext;
 
 	return outlen;
 }
@@ -70,6 +71,7 @@ unsigned int EncryptSession::encrypt_end()
 		printf("EVP_SealFinal Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
 
 	this->ciphertext.appendBytes(partial_ciphertext, outlen);
+	delete[] partial_ciphertext;
 
 	return outlen;
 }

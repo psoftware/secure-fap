@@ -40,6 +40,7 @@ unsigned int DecryptSession::decrypt(unsigned char *partial_ciphertext, unsigned
 		printf("EVP_OpenUpdate Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
 
 	this->plaintext.appendBytes(partial_plaintext, outlen);
+	delete[] partial_plaintext;
 
 	return (unsigned int)outlen;
 }
@@ -53,6 +54,7 @@ unsigned int DecryptSession::decrypt_end()
 		printf("EVP_OpenFinal Error: %s\n", ERR_error_string(ERR_get_error(), NULL));
 
 	this->plaintext.appendBytes(latest_partial_plaintext, outlen);
+	delete[] latest_partial_plaintext;
 
 	return (unsigned int)outlen;
 }
