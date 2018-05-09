@@ -95,6 +95,25 @@ int main(int argc, char **argv)
 
 	// 3) Verify Server Identity
 	// receive E(Kpriv, client_nonce|server_nonce)
+	unsigned int signature_len = recv_data(sd, &my_buff);
+	unsigned char *signature = new unsigned char[signature_len];
+	memcpy(signature, my_buff.buf, signature_len);
+
+	SignatureVerifier sv("keys/rsa_server_pubkey.pem");
+
+	unsigned char expected_signed[16];
+	memcpy(expected_signed, &cl_nonce, 8);
+	memcpy(expected_signed + 8, &sr_nonce, 8);
+	sv.verify(expected_signed, 16);
+
+	if(!sv.verify_end(signature, signature_len))
+	{
+		printf("Signature not verified!\n");
+		return -1;
+	}
+
+	printf("Server Authentication Success!\n");
+
 	// compare nonces
 
 	// 4) Send client verification infos and KeySession

@@ -67,6 +67,40 @@ public:
 	~DecryptSession();
 };
 
+class SignatureMaker {
+private:
+	EVP_PKEY* prvkey;
+
+	EVP_MD_CTX* ctx;
+
+	bool read_prv_key(const char *filename);
+	SignatureMaker(const SignatureMaker&);
+public:
+	SignatureMaker(const char* prvkey_path);
+
+	unsigned int sign(unsigned char *partial_plaintext, unsigned int partial_plainlen);
+	unsigned int sign_end(unsigned char **signature);
+
+	~SignatureMaker();
+};
+
+class SignatureVerifier {
+private:
+	EVP_PKEY* pubkeys[1];
+
+	EVP_MD_CTX* ctx;
+
+	bool read_pub_key(const char *filename);
+	SignatureVerifier(const SignatureVerifier&);
+public:
+	SignatureVerifier(const char* pubkey_path);
+
+	void verify(unsigned char *partial_plaintext, unsigned int partial_plainlen);
+	bool verify_end(unsigned char *signature, unsigned int signature_len);
+
+	~SignatureVerifier();
+};
+
 
 class SymmetricCipher {
 private:

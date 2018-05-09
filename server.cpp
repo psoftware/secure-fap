@@ -84,7 +84,20 @@ int main(int argc, char** argv)
 	send_hello_msg(cl_sd);
 
 	// 3) Send Server verification infos
-	// VA FATTO CON LA FIRMA DIGITALE
+	// sign client_nonce|server_noncce
+	SignatureMaker sm("keys/rsa_server_privkey.pem");
+
+	unsigned char to_sign[16];
+	memcpy(to_sign, &cl_nonce, 8);
+	memcpy(to_sign + 8, &sr_nonce, 8);
+	sm.sign(to_sign, 16);
+
+	unsigned char *signature;
+	unsigned int signature_len = sm.sign_end(&signature);
+
+	// send client_nonce|server_noncce
+	send_data(cl_sd, signature, signature_len);
+	printf("sent: signature_len  = %u\n", signature_len);
 
 	// 4) Validate Client and Get Session key
 	// getting session encrypted key
