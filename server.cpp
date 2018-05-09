@@ -209,10 +209,11 @@ int main(int argc, char** argv)
 	}
 
 	memcpy(iv, my_buff.buf, iv_len);
-
-	recv_data(cl_sd, &my_buff);
-	memcpy(&s_msg,my_buff.buf,sizeof(s_msg));
-	convert_to_host_order(&s_msg);
+	if( !recv_msg(cl_sd,&s_msg,SEND_FILE) )
+	{
+		printf("Errore ricezione messaggio SEND_FILE \n");
+		return -1;
+	}
 	printf("Riceverò %d chunk di dimensione:%d \n",s_msg.chunk_number,s_msg.chunk_size);
 
 	DecryptSession ds("keys/rsa_server_privkey.pem", encrypted_key, encrypted_key_len, iv);

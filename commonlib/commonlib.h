@@ -16,6 +16,8 @@
 #include <openssl/pem.h>
 #include <openssl/rand.h>
 #include <openssl/err.h>
+#include "messages.h"
+#include "net_wrapper.h"
 
 #define CHUNK_SIZE 32
 #define HMAC_LENGTH 32
@@ -96,5 +98,7 @@ void open_file_w(const char *filename, FILE **fp);
 
 // Server functions
 int initialize_server_socket(const char * bind_addr, int port);
+
+bool recv_msg(int sd, void *s_msg, message_type expected);
 
 #endif

@@ -69,7 +69,7 @@ void convert_to_network_order( void* msg );
 * Riconosce automaticamente il messaggio e
 * lo converte nell'host order
 ********************************************/
-void convert_to_host_order( void* msg );
+int convert_to_host_order( void* msg );
 
 #ifdef __cplusplus
 }
