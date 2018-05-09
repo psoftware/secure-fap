@@ -153,12 +153,6 @@ int main(int argc, char** argv)
 	pl_offset += 8;
 	printf("received_client_nonce = %ld\n", received_client_nonce);
 
-	if(received_client_nonce != cl_nonce)
-	{
-		printf("error: nonces unmatch!\n");
-		return -1;
-	}
-
 	unsigned char session_key[16];
 	memcpy(session_key, auth_plaintext + pl_offset, 16);
 	pl_offset += 16;
@@ -174,6 +168,25 @@ int main(int argc, char** argv)
 	printf("got key:\n");
 	print_hex(session_key, 16);
 	printf("got: username = %s, password = %s\n", received_username, received_password);
+
+	// 5) Send Ok/no
+	simple_msg auth_resp_msg;
+
+	if(received_client_nonce != cl_nonce)
+	{
+		printf("error: nonces unmatch!\n");
+		auth_resp_msg.t = AUTHENTICATION_FAILED;
+		send_data(cl_sd, (unsigned char*)&auth_resp_msg, sizeof(auth_resp_msg));
+		return -1;
+	}
+
+	auth_resp_msg.t = AUTHENTICATION_OK;
+	send_data(cl_sd, (unsigned char*)&auth_resp_msg, sizeof(auth_resp_msg));
+
+	// 6) Receive Command
+	// 7) Send Response
+
+
 	// ----------------------------------------------------------------
 
 	//ricevo la chiave simmetrica

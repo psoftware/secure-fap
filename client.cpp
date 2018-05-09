@@ -153,6 +153,24 @@ int main(int argc, char **argv)
 	send_data(sd, auth_ciphertext, auth_cipherlen);
 	send_data(sd, auth_ciphertext_padding, auth_cipherlen_padding);
 
+	// 5) Waiting for AuthOK or AuthFailed
+	simple_msg auth_response_msg;
+	recv_data(sd, &my_buff);
+	memcpy(&auth_response_msg, my_buff.buf, sizeof(auth_response_msg));
+
+	if(auth_response_msg.t == AUTHENTICATION_FAILED)
+	{
+		printf("Authentication Failed!\n");
+		return -1;
+	}
+
+	printf("Authentication success!\n");
+
+	// 6) Send Command
+	// 7) Receive Response
+
+	// ----------------------------------------------------------------
+
 
 	// Start PublicKey Session
 	EncryptSession ss("keys/rsa_server_pubkey.pem");
