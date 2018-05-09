@@ -12,8 +12,6 @@
 
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
-#include <openssl/rsa.h>
-#include <openssl/pem.h>
 #include <openssl/rand.h>
 #include <openssl/err.h>
 #include "messages.h"
@@ -25,6 +23,8 @@
 #include "EncryptSession.h"
 #include "DecryptSession.h"
 #include "SymmetricCipher.h"
+#include "SignatureVerifier.h"
+#include "SignatureMaker.h"
 
 /* ##### OpenSSL Help Functions ##### */;
 class HMACMaker {
@@ -45,40 +45,6 @@ unsigned int hmac_compute(
 	unsigned char *inputdata[], unsigned int inputdata_length[], unsigned int inputdata_count,
 	unsigned char *key, unsigned int key_length,
 	unsigned char *hash_output);
-
-class SignatureMaker {
-private:
-	EVP_PKEY* prvkey;
-
-	EVP_MD_CTX* ctx;
-
-	bool read_prv_key(const char *filename);
-	SignatureMaker(const SignatureMaker&);
-public:
-	SignatureMaker(const char* prvkey_path);
-
-	unsigned int sign(unsigned char *partial_plaintext, unsigned int partial_plainlen);
-	unsigned int sign_end(unsigned char **signature);
-
-	~SignatureMaker();
-};
-
-class SignatureVerifier {
-private:
-	EVP_PKEY* pubkeys[1];
-
-	EVP_MD_CTX* ctx;
-
-	bool read_pub_key(const char *filename);
-	SignatureVerifier(const SignatureVerifier&);
-public:
-	SignatureVerifier(const char* pubkey_path);
-
-	void verify(unsigned char *partial_plaintext, unsigned int partial_plainlen);
-	bool verify_end(unsigned char *signature, unsigned int signature_len);
-
-	~SignatureVerifier();
-};
 
 // Utils
 void print_hex(unsigned char* buff, unsigned int size);
