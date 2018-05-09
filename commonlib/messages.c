@@ -39,7 +39,7 @@ void convert_to_network_order( void* msg )
 	}
 }
 
-void convert_to_host_order( void* msg )
+int convert_to_host_order( void* msg )
 {
 	/*il campo type dei messaggi viene convertito
 	  nel formato host order prima dello switch */
@@ -70,6 +70,8 @@ void convert_to_host_order( void* msg )
 			((send_file_msg*)msg)->chunk_number = ntohl(((send_file_msg*)msg)->chunk_number);
 			break;
 		default:
+			return -1;
 			break;
 	}
+	return *m_t;
 }

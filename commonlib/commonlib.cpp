@@ -423,3 +423,16 @@ unsigned char* SymmetricCipher::get_key()
 {
 	return this->key;
 }
+
+bool recv_msg(int sd, void *s_msg, message_type expected)
+{
+	my_buffer my_buff = {NULL, 0};
+	int bytes_rec = recv_data(sd, &my_buff);
+	memcpy(s_msg,my_buff.buf,bytes_rec);
+	int t = convert_to_host_order(s_msg);
+	printf("expected:%d received:%d \n",expected,t);
+	if( t == expected )
+		return true;
+	else 
+		return false;
+}

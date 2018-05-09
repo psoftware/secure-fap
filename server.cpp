@@ -25,13 +25,29 @@ uint64_t generate_nonce()
 	return nonce;
 }
 
-int send_hello_msg(int sock) {
+bool send_hello_msg(int sock) {
 	hello_msg h;
 	h.t = SERVER_HELLO;
 	h.nonce = sr_nonce = generate_nonce();
 	convert_to_network_order(&h);
 	printf("server sends nonce: %ld\n",sr_nonce);
-	return send_data(sock,(unsigned char*)&h, sizeof(h));
+	if( send_data(sock,(unsigned char*)&h, sizeof(h)) == sizeof(h) )
+		return true;
+	else
+		return false;
+
+}
+
+bool recv_hello_msg(int sd){
+	hello_msg h_msg;
+	if(	!recv_msg(sd, &h_msg ,CLIENT_HELLO) )
+	{
+		printf("Error receive CLIENT_HELLO\n");
+		return false;
+	} else  {
+		cl_nonce = h_msg.nonce;
+		return true;
+	}
 }
 
 int analyze_message(unsigned char* buf)
@@ -48,6 +64,8 @@ int analyze_message(unsigned char* buf)
 
 	return 0;
 }
+
+
 
 int main(int argc, char** argv)
 {
@@ -77,11 +95,12 @@ int main(int argc, char** argv)
 	int cl_sd = accept_tcp_server(sd,&conn);
 
 	// 1) Get Client Nonce
-	recv_data(cl_sd,&my_buff); 
-	analyze_message(my_buff.buf);
+	if( !recv_hello_msg(cl_sd) )
+		return -1;
 
 	// 2) Send Server Nonce
-	send_hello_msg(cl_sd);
+	if ( !send_hello_msg(cl_sd) )
+		return -1;
 
 	// 3) Send Server verification infos
 	// sign client_nonce|server_noncce
@@ -222,10 +241,11 @@ int main(int argc, char** argv)
 	}
 
 	memcpy(iv, my_buff.buf, iv_len);
-
-	recv_data(cl_sd, &my_buff);
-	memcpy(&s_msg,my_buff.buf,sizeof(s_msg));
-	convert_to_host_order(&s_msg);
+	if( !recv_msg(cl_sd,&s_msg,SEND_FILE) )
+	{
+		printf("Errore ricezione messaggio SEND_FILE \n");
+		return -1;
+	}
 	printf("Riceverò %d chunk di dimensione:%d \n",s_msg.chunk_number,s_msg.chunk_size);
 
 	DecryptSession ds("keys/rsa_server_privkey.pem", encrypted_key, encrypted_key_len, iv);
