@@ -54,32 +54,35 @@ void open_file_w(const char *filename, FILE **fp)
 
 /* ##### OpenSSL Help Functions ##### */
 
-unsigned int hmac_compute(unsigned char *inputdata[], unsigned int inputdata_length[], unsigned int inputdata_count, unsigned char *key, unsigned int key_length, unsigned char *hash_output)
+HMACMaker::HMACMaker(unsigned char *key, unsigned int key_length)
 {
-	// initialize ctx
-	HMAC_CTX* hmac_ctx;
 	hmac_ctx = new HMAC_CTX;
 	HMAC_CTX_init(hmac_ctx);
 
 	// init HMAC (using sha256)
 	HMAC_Init(hmac_ctx, key, key_length, EVP_sha256());
+}
 
-	// hash is based on inputdata array values concatenation
-	for(unsigned int i = 0; i < inputdata_count; i++)
-		HMAC_Update(hmac_ctx, inputdata[i], inputdata_length[i]);
+unsigned int HMACMaker::hash(unsigned char *partial_plaintext, unsigned int partial_plainlen)
+{
+	HMAC_Update(hmac_ctx, partial_plaintext, partial_plainlen);
+}
 
-	// finalize
+unsigned int HMACMaker::hash_end(unsigned char **hash)
+{
+	*hash = new unsigned char[HMAC_LENGTH];
 	unsigned int outlen;
-	HMAC_Final(hmac_ctx, hash_output, &outlen);
-
-	// cleanup
-	HMAC_CTX_cleanup(hmac_ctx);
-	delete hmac_ctx;
-
-	//NB: The HMAC_Init(), HMAC_Update(), HMAC_Final(), and HMAC_cleanup() do not return values.
+	HMAC_Final(hmac_ctx, *hash, &outlen);
 
 	return outlen;
 }
+
+HMACMaker::~HMACMaker()
+{
+	HMAC_CTX_cleanup(hmac_ctx);
+	delete hmac_ctx;
+}
+
 
 
 bool EncryptSession::read_pub_key(const char *filename)

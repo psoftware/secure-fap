@@ -23,11 +23,20 @@
 #define HMAC_LENGTH 32
 
 
-/* ##### OpenSSL Help Functions ##### */
-unsigned int hmac_compute(
-	unsigned char *inputdata[], unsigned int inputdata_length[], unsigned int inputdata_count,
-	unsigned char *key, unsigned int key_length,
-	unsigned char *hash_output);
+/* ##### OpenSSL Help Functions ##### */;
+class HMACMaker {
+private:
+	HMAC_CTX* hmac_ctx;
+
+	HMACMaker(const HMACMaker&);
+public:
+	HMACMaker(unsigned char *key, unsigned int key_length);
+
+	unsigned int hash(unsigned char *partial_plaintext, unsigned int partial_plainlen);
+	unsigned int hash_end(unsigned char **hash);
+
+	~HMACMaker();
+};
 
 class EncryptSession {
 private:
