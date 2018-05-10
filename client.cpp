@@ -138,25 +138,16 @@ int main(int argc, char **argv)
 	send_data(sd, auth_iv, EVP_CIPHER_iv_length(EVP_aes_128_cbc()));
 
 	// ## ciphered data
-	unsigned char *auth_plaintext = new unsigned char[8 + 16 + sizeof(auth_username) + sizeof(auth_secret)];
-	unsigned int auth_plaintext_size = 0;
-	// client nonce encrypt
-	memcpy(auth_plaintext, (unsigned char*)&sr_nonce, 8);
-	auth_plaintext_size += 8;
-	// session key encrypt
-	memcpy(auth_plaintext + auth_plaintext_size, session_key, 16);
-	auth_plaintext_size += 16;
-	// username encrypt
-	memcpy(auth_plaintext + auth_plaintext_size, auth_username, sizeof(auth_username));
-	auth_plaintext_size += sizeof(auth_username);
-	// password encrypt
-	memcpy(auth_plaintext + auth_plaintext_size, auth_secret, sizeof(auth_secret));
-	auth_plaintext_size += sizeof(auth_secret);
-
-	// encrypt all
 	unsigned char *auth_ciphertext;
 	unsigned int auth_cipherlen;
-	asymm_authclient_cipher.encrypt(auth_plaintext, auth_plaintext_size);
+	// client nonce encrypt
+	asymm_authclient_cipher.encrypt((unsigned char*)&sr_nonce, 8);
+	// session key encrypt
+	asymm_authclient_cipher.encrypt(session_key, 16);
+	// username encrypt
+	asymm_authclient_cipher.encrypt(auth_username, sizeof(auth_username));
+	// password encrypt
+	asymm_authclient_cipher.encrypt(auth_secret, sizeof(auth_secret));
 	asymm_authclient_cipher.encrypt_end();
 	auth_cipherlen = asymm_authclient_cipher.flush_ciphertext(&auth_ciphertext);
 
