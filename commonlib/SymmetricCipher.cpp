@@ -42,7 +42,7 @@ SymmetricCipher::~SymmetricCipher()
 
 unsigned int SymmetricCipher::encrypt(unsigned char *sourcedata, unsigned int sourcedata_len)
 {
-	unsigned char *partial_ciphertext = new unsigned char[sourcedata_len];
+	unsigned char *partial_ciphertext = new unsigned char[sourcedata_len + 16];
 
 	int outlen;
 	int evp_res = EVP_EncryptUpdate(encrypt_ctx, partial_ciphertext, &outlen, sourcedata, sourcedata_len);
