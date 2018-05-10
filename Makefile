@@ -21,28 +21,28 @@ commonlib/commonlib.o: commonlib/commonlib.cpp commonlib/commonlib.h
 	g++ -c -g commonlib/commonlib.cpp -o commonlib/commonlib.o
 
 commonlib/net_wrapper.o: commonlib/net_wrapper.c commonlib/net_wrapper.h
-	gcc -c commonlib/net_wrapper.c -o commonlib/net_wrapper.o
+	gcc -c -g commonlib/net_wrapper.c -o commonlib/net_wrapper.o
 
 commonlib/messages.o: commonlib/messages.c commonlib/messages.h
-	gcc -c commonlib/messages.c -o commonlib/messages.o
+	gcc -c -g commonlib/messages.c -o commonlib/messages.o
 
 commonlib/EncryptSession.o: commonlib/EncryptSession.cpp commonlib/EncryptSession.h
-	g++ -c commonlib/EncryptSession.cpp -o commonlib/EncryptSession.o
+	g++ -c -g commonlib/EncryptSession.cpp -o commonlib/EncryptSession.o
 
 commonlib/DecryptSession.o: commonlib/DecryptSession.cpp commonlib/DecryptSession.h
-	g++ -c commonlib/DecryptSession.cpp -o commonlib/DecryptSession.o
+	g++ -c -g commonlib/DecryptSession.cpp -o commonlib/DecryptSession.o
 
 commonlib/SymmetricCipher.o: commonlib/SymmetricCipher.cpp commonlib/SymmetricCipher.h
-	g++ -c commonlib/SymmetricCipher.cpp -o commonlib/SymmetricCipher.o
+	g++ -c -g commonlib/SymmetricCipher.cpp -o commonlib/SymmetricCipher.o
 
 commonlib/SignatureVerifier.o: commonlib/SignatureVerifier.cpp commonlib/SignatureVerifier.h
-	g++ -c commonlib/SignatureVerifier.cpp -o commonlib/SignatureVerifier.o
+	g++ -c -g commonlib/SignatureVerifier.cpp -o commonlib/SignatureVerifier.o
 
 commonlib/SignatureMaker.o: commonlib/SignatureMaker.cpp commonlib/SignatureMaker.h
-	g++ -c commonlib/SignatureMaker.cpp -o commonlib/SignatureMaker.o
+	g++ -c -g commonlib/SignatureMaker.cpp -o commonlib/SignatureMaker.o
 
 commonlib/DynamicArray.o: commonlib/DynamicArray.cpp commonlib/DynamicArray.h
-	g++ -c commonlib/DynamicArray.cpp -o commonlib/DynamicArray.o
+	g++ -c -g commonlib/DynamicArray.cpp -o commonlib/DynamicArray.o
 
 clean:
 	rm -f client server *.o commonlib/*.o
