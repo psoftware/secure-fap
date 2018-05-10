@@ -89,5 +89,5 @@ EncryptSession::~EncryptSession()
 	delete ctx;
 
 	delete[] iv;
-	delete[] encrypted_keys[0];
+	EVP_PKEY_free(pubkeys[0]);
 }
