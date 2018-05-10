@@ -49,11 +49,6 @@ int analyze_message(unsigned char* buf)
 	return 0;
 }
 
-unsigned int divide_upper(unsigned int dividend, unsigned int divisor)
-{
-    return 1 + ((dividend - 1) / divisor);
-}
-
 bool verify_server_identity(int sd)
 {
 	unsigned int signature_len = recv_data(sd, &my_buff);
@@ -236,6 +231,108 @@ bool receive_str_response(int sd, unsigned char **received_data, unsigned int* r
 	return true;
 }
 
+bool receive_file_response(int sd)
+{
+	FILE *fp;
+	open_file_w("ricevuto.txt", &fp);
+
+	// getting iv
+	unsigned char *iv = new unsigned char[EVP_CIPHER_iv_length(EVP_aes_128_cbc())];
+	unsigned int iv_len = recv_data(sd, &my_buff);
+	memcpy(iv, my_buff.buf, iv_len);
+
+	// get file transfer header
+	send_file_msg s_msg;
+	if(!recv_msg(sd, &s_msg, SEND_FILE)) {
+		printf("Errore ricezione messaggio SEND_FILE \n");
+		return -1;
+	}
+
+	SymmetricCipher sc(EVP_aes_128_cbc(), session_key, iv);
+	HMACMaker hm(session_key, 16);
+
+	unsigned int total_plainlen = 0;
+	// initialize receive buffer
+	my_buffer chunk_cipher;
+	chunk_cipher.buf = NULL;
+	chunk_cipher.size = 0;
+	for(unsigned int i=0; i < s_msg.chunk_number; i++)
+	{
+		// get chunk from tcp socket
+		unsigned int chunk_cipherlen = recv_data(sd, &chunk_cipher);
+		printf("decrypting chunk(%d) of %d ciphertext bytes\n", i, chunk_cipherlen);
+
+		// hash partial encrypted text
+		hm.hash(chunk_cipher.buf, chunk_cipherlen);
+
+		// do decryption
+		unsigned char* chunk_plaintext;
+		sc.decrypt(chunk_cipher.buf, chunk_cipherlen);
+		unsigned int chunk_plainlen = sc.flush_plaintext(&chunk_plaintext);
+
+		// if first chunk, nonce must be extracted and verified
+		if(i == 0)
+		{
+			if(chunk_cipherlen < sizeof(uint64_t))
+				return false;
+
+			uint64_t received_seqno;
+			memcpy((void*)&received_seqno, chunk_plaintext, sizeof(uint64_t));
+
+			// verify sequence number
+			if(received_seqno != cl_seq_num) {
+				printf("receive_str_response: Invalid sequence number! (%lu != %lu)\n", received_seqno, cl_seq_num);
+				return false;
+			}
+
+			// chunk_plaintext must be purified from received
+			chunk_plaintext += sizeof(uint64_t);
+			chunk_plainlen -= sizeof(uint64_t);
+		}
+
+		total_plainlen += chunk_plainlen;
+
+		// write to file
+		fwrite(chunk_plaintext, 1, chunk_plainlen, fp);
+
+		// if latest chunk, compute padding
+		if(i == s_msg.chunk_number-1)
+		{
+			unsigned char *padding_plaintext;
+			sc.decrypt_end();
+			unsigned padding_plainlen = sc.flush_plaintext(&padding_plaintext);
+			total_plainlen += padding_plainlen;
+			printf("adding last padded block of %d bytes\n", padding_plainlen);
+
+			// write latest block (without padding)
+			fwrite(padding_plaintext, 1, padding_plainlen, fp);
+		}
+	}
+
+	// getting from client HMAC_Ksess{seqnum|command_str}_Ksess
+	unsigned int received_hmac_len = recv_data(sd, &my_buff);
+	unsigned char *received_hmac = new unsigned char[received_hmac_len];
+	memcpy(received_hmac, my_buff.buf, received_hmac_len);
+
+	// finally compute HMAC_Ksess{seqnum|command_str}_Ksess
+	unsigned char *computed_hmac;
+	hm.hash_end(&computed_hmac);
+
+	// verify hash
+	if(CRYPTO_memcmp(computed_hmac, received_hmac, HMAC_LENGTH) != 0)
+	{
+		printf("receive_str_response: HMAC authentication failed!\n");
+		return false;
+	}
+
+	printf("receive_str_response: HMAC authentication success!\n");
+
+	// increment server sequence number
+	cl_seq_num++;
+
+	return true;
+}
+
 int main(int argc, char **argv)
 {
 	ERR_load_crypto_strings();
@@ -295,68 +392,9 @@ int main(int argc, char **argv)
 		return -1;
 
 	printf("Received response:\n%s\n", received_data);
-	// ----------------------------------------------------------------
 
-
-	// Start PublicKey Session
-	EncryptSession ss("keys/rsa_server_pubkey.pem");
-
-	unsigned char *iv = ss.get_iv();
-	unsigned char *pk_encrypted_key;
-	unsigned int pk_encrypted_key_len = ss.get_session_key(&pk_encrypted_key);
-
-	send_data(sd, pk_encrypted_key, pk_encrypted_key_len);
-	send_data(sd, iv, EVP_CIPHER_iv_length(EVP_aes_128_cbc()));
-
-	// getting file size
-	FILE *fp;
-	unsigned int filesize = open_file_r(argv[1], &fp);
-	unsigned int chunk_count = divide_upper(filesize, CHUNK_SIZE);
-	printf("File size = %u, Chunk size = %d, Chunk count = %d\n", filesize, CHUNK_SIZE, chunk_count);
-
-	// send to server chunk transfer details
-	send_file_msg s_msg = {SEND_FILE, CHUNK_SIZE, chunk_count + 1};  // +1 for padding
-	convert_to_network_order(&s_msg);
-	send_data(sd, (unsigned char*)&s_msg, sizeof(s_msg));
-
-	unsigned char datachunk[CHUNK_SIZE];
-	for(unsigned int i=0; i<chunk_count; i++)
-	{
-		// read next chunk from file
-		unsigned int chunk_plainlen = fread(datachunk, 1, CHUNK_SIZE, fp);
-		printf("encrypting chunk of %d plaintext bytes\n", chunk_plainlen);
-
-		// do encryption
-		unsigned char *chunk_ciphertext;
-		ss.encrypt(datachunk, chunk_plainlen);
-		unsigned int chunk_cipherlen = ss.flush_ciphertext(&chunk_ciphertext);
-
-		// send encrypted data
-		printf("sending chunk(%d) of %d bytes\n", i, chunk_cipherlen);
-		send_data(sd, chunk_ciphertext, chunk_cipherlen);
-		delete[] chunk_ciphertext;
-
-		// if last chunk
-		if(i==chunk_count-1)
-		{
-			// compute padding
-			unsigned char *padding_ciphertext;
-			ss.encrypt_end();
-			unsigned int padding_cipherlen = ss.flush_ciphertext(&padding_ciphertext);
-
-			// send padding
-			printf("sending padding of %d bytes\n", padding_cipherlen);
-			send_data(sd, padding_ciphertext, padding_cipherlen);
-			delete[] padding_ciphertext;
-		}
-	}
-
-	printf("session_key: ");
-	print_hex(pk_encrypted_key, pk_encrypted_key_len);
-	printf("iv: ");
-	print_hex(iv, EVP_CIPHER_iv_length(EVP_aes_128_cbc()));
-	//printf("ciphertext: ");
-	//print_hex(ciphertext, cipherlen);
+	// TEST
+	receive_file_response(sd);
 
 	close(sd);
 
