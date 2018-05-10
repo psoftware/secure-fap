@@ -234,7 +234,7 @@ bool receive_command(int cl_sd, unsigned char **received_command, unsigned int* 
 	return true;
 }
 
-bool send_command(int sd, char data_response[], unsigned int data_response_len)
+bool send_str_response(int sd, char data_response[], unsigned int data_response_len)
 {
 	unsigned char *data_resp_iv = new unsigned char[EVP_CIPHER_iv_length(EVP_aes_128_cbc())];
 	generate_iv(data_resp_iv);
@@ -325,7 +325,7 @@ int main(int argc, char** argv)
 	// 7) Send Response
 	// send {seqnum|data_response}_Ksess | HMAC{{seqnum|data_response}_Ksess}_Ksess
 	char data_response[] = "Nun c'ho nulla\nFine risposta";
-	if(!send_command(cl_sd, data_response, strlen(data_response)+1))
+	if(!send_str_response(cl_sd, data_response, strlen(data_response)+1))
 		return -1;
 
 
