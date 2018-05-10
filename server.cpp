@@ -66,6 +66,109 @@ int analyze_message(unsigned char* buf)
 	return 0;
 }
 
+bool send_server_verification(int cl_sd)
+{
+	SignatureMaker sm("keys/rsa_server_privkey.pem");
+
+	unsigned char to_sign[16];
+	memcpy(to_sign, &cl_nonce, 8);
+	memcpy(to_sign + 8, &sr_nonce, 8);
+	sm.sign(to_sign, 16);
+
+	unsigned char *signature;
+	unsigned int signature_len = sm.sign_end(&signature);
+
+	// send client_nonce|server_noncce
+	send_data(cl_sd, signature, signature_len);
+	printf("sent: signature_len  = %u\n", signature_len);
+
+	return true;
+}
+
+bool check_client_identity(int cl_sd)
+{
+	// 4) Validate Client and Get Session key
+	// getting session encrypted key
+	unsigned int auth_encrypted_key_len = recv_data(cl_sd, &my_buff);
+	if(auth_encrypted_key_len > 10000)
+	{
+		printf("error: auth_encrypted_key_len = %u invalid size!\n", auth_encrypted_key_len);
+		return false;
+	}
+	unsigned char *auth_encrypted_key = new unsigned char[auth_encrypted_key_len];
+	memcpy(auth_encrypted_key, my_buff.buf, auth_encrypted_key_len);
+
+	// getting session iv
+	unsigned char *auth_iv = new unsigned char[EVP_CIPHER_iv_length(EVP_aes_128_cbc())];
+	unsigned int auth_iv_len = recv_data(cl_sd, &my_buff);
+	if((int)auth_iv_len != EVP_CIPHER_iv_length(EVP_aes_128_cbc())) {
+		printf("error: auth_iv_len = %u instead of %d!\n", auth_iv_len, EVP_CIPHER_iv_length(EVP_aes_128_cbc()));
+		return false;
+	}
+	memcpy(auth_iv, my_buff.buf, auth_iv_len);
+
+
+	// getting client authentication header
+	client_auth auth_header_msg;
+	recv_data(cl_sd, &my_buff);
+	memcpy(&auth_header_msg, my_buff.buf, sizeof(auth_header_msg));
+	convert_to_host_order(&auth_header_msg);
+
+	printf("client header: ciphertext_len = %u, username_length = %u, password_length = %u\n",
+		auth_header_msg.total_ciphertext_size, auth_header_msg.username_length, auth_header_msg.password_length);
+
+	DecryptSession asymm_authclient_decipher("keys/rsa_server_privkey.pem", auth_encrypted_key, auth_encrypted_key_len, auth_iv);
+
+	// receive ciphertext
+	unsigned int auth_cipherlen = recv_data(cl_sd, &my_buff);
+
+	// decode ciphertext
+	unsigned char *auth_plaintext = new unsigned char[auth_header_msg.total_ciphertext_size];
+	unsigned int auth_plainlen = 0;
+	asymm_authclient_decipher.decrypt(my_buff.buf, auth_cipherlen);
+	asymm_authclient_decipher.decrypt_end();
+	auth_plainlen = asymm_authclient_decipher.flush_plaintext(&auth_plaintext);
+
+	// decompose plaintext
+	unsigned int pl_offset = 0;
+
+	uint64_t received_server_nonce;
+	memcpy(&received_server_nonce, auth_plaintext, 8);
+	pl_offset += 8;
+	printf("received_server_nonce = %ld\n", received_server_nonce);
+
+	memcpy(session_key, auth_plaintext + pl_offset, 16);
+	pl_offset += 16;
+
+	unsigned char *received_username = new unsigned char[auth_header_msg.username_length];
+	memcpy(received_username, auth_plaintext + pl_offset, auth_header_msg.username_length);
+	pl_offset += auth_header_msg.username_length;
+
+	unsigned char *received_password = new unsigned char[auth_header_msg.password_length];
+	memcpy(received_password, auth_plaintext + pl_offset, auth_header_msg.password_length);
+	pl_offset += auth_header_msg.username_length;
+
+	printf("got key:\n");
+	print_hex(session_key, 16);
+	printf("got: username = %s, password = %s\n", received_username, received_password);
+
+	// 5) send auth result
+	simple_msg auth_resp_msg;
+
+	if(received_server_nonce != sr_nonce)
+	{
+		printf("error: nonces unmatch!\n");
+		auth_resp_msg.t = AUTHENTICATION_FAILED;
+		send_data(cl_sd, (unsigned char*)&auth_resp_msg, sizeof(auth_resp_msg));
+		return false;
+	}
+
+	auth_resp_msg.t = AUTHENTICATION_OK;
+	send_data(cl_sd, (unsigned char*)&auth_resp_msg, sizeof(auth_resp_msg));
+
+	return true;
+}
+
 bool receive_command(int cl_sd, unsigned char **received_command, unsigned int* received_command_len)
 {
 	// getting iv
@@ -202,101 +305,18 @@ int main(int argc, char** argv)
 		return -1;
 
 	// 3) Send Server verification infos
-	// sign client_nonce|server_noncce
-	SignatureMaker sm("keys/rsa_server_privkey.pem");
-
-	unsigned char to_sign[16];
-	memcpy(to_sign, &cl_nonce, 8);
-	memcpy(to_sign + 8, &sr_nonce, 8);
-	sm.sign(to_sign, 16);
-
-	unsigned char *signature;
-	unsigned int signature_len = sm.sign_end(&signature);
-
-	// send client_nonce|server_noncce
-	send_data(cl_sd, signature, signature_len);
-	printf("sent: signature_len  = %u\n", signature_len);
-
-	// 4) Validate Client and Get Session key
-	// getting session encrypted key
-	unsigned int auth_encrypted_key_len = recv_data(cl_sd, &my_buff);
-	if(auth_encrypted_key_len > 10000)
-	{
-		printf("error: auth_encrypted_key_len = %u invalid size!\n", auth_encrypted_key_len);
+	// sign {client_nonce|server_nonce}_Kpub
+	if ( !send_server_verification(cl_sd) )
 		return -1;
-	}
-	unsigned char *auth_encrypted_key = new unsigned char[auth_encrypted_key_len];
-	memcpy(auth_encrypted_key, my_buff.buf, auth_encrypted_key_len);
 
-	// getting session iv
-	unsigned char *auth_iv = new unsigned char[EVP_CIPHER_iv_length(EVP_aes_128_cbc())];
-	unsigned int auth_iv_len = recv_data(cl_sd, &my_buff);
-	if((int)auth_iv_len != EVP_CIPHER_iv_length(EVP_aes_128_cbc())) {
-		printf("error: auth_iv_len = %u instead of %d!\n", auth_iv_len, EVP_CIPHER_iv_length(EVP_aes_128_cbc()));
+	// 4/5) Check Client identity / Send auth response
+	// receive {client_nonce|session key|username|password}_Kpub
+	// send authok or authfailed
+	if ( !check_client_identity(cl_sd) )
 		return -1;
-	}
-	memcpy(auth_iv, my_buff.buf, auth_iv_len);
-
-
-	// getting client authentication header
-	client_auth auth_header_msg;
-	recv_data(cl_sd, &my_buff);
-	memcpy(&auth_header_msg, my_buff.buf, sizeof(auth_header_msg));
-	convert_to_host_order(&auth_header_msg);
-
-	printf("client header: ciphertext_len = %u, username_length = %u, password_length = %u\n",
-		auth_header_msg.total_ciphertext_size, auth_header_msg.username_length, auth_header_msg.password_length);
-
-	DecryptSession asymm_authclient_decipher("keys/rsa_server_privkey.pem", auth_encrypted_key, auth_encrypted_key_len, auth_iv);
-
-	// receive ciphertext
-	unsigned int auth_cipherlen = recv_data(cl_sd, &my_buff);
-
-	// decode ciphertext
-	unsigned char *auth_plaintext = new unsigned char[auth_header_msg.total_ciphertext_size];
-	unsigned int auth_plainlen = 0;
-	asymm_authclient_decipher.decrypt(my_buff.buf, auth_cipherlen);
-	asymm_authclient_decipher.decrypt_end();
-	auth_plainlen = asymm_authclient_decipher.flush_plaintext(&auth_plaintext);
-
-	// decompose plaintext
-	unsigned int pl_offset = 0;
-
-	uint64_t received_server_nonce;
-	memcpy(&received_server_nonce, auth_plaintext, 8);
-	pl_offset += 8;
-	printf("received_server_nonce = %ld\n", received_server_nonce);
-
-	memcpy(session_key, auth_plaintext + pl_offset, 16);
-	pl_offset += 16;
-
-	unsigned char *received_username = new unsigned char[auth_header_msg.username_length];
-	memcpy(received_username, auth_plaintext + pl_offset, auth_header_msg.username_length);
-	pl_offset += auth_header_msg.username_length;
-
-	unsigned char *received_password = new unsigned char[auth_header_msg.password_length];
-	memcpy(received_password, auth_plaintext + pl_offset, auth_header_msg.password_length);
-	pl_offset += auth_header_msg.username_length;
-
-	printf("got key:\n");
-	print_hex(session_key, 16);
-	printf("got: username = %s, password = %s\n", received_username, received_password);
-
-	// 5) Send Ok/no
-	simple_msg auth_resp_msg;
-
-	if(received_server_nonce != sr_nonce)
-	{
-		printf("error: nonces unmatch!\n");
-		auth_resp_msg.t = AUTHENTICATION_FAILED;
-		send_data(cl_sd, (unsigned char*)&auth_resp_msg, sizeof(auth_resp_msg));
-		return -1;
-	}
-
-	auth_resp_msg.t = AUTHENTICATION_OK;
-	send_data(cl_sd, (unsigned char*)&auth_resp_msg, sizeof(auth_resp_msg));
 
 	// 6) Receive Command
+	// receive {seqnum|command_str}_Ksess | HMAC{{seqnum|command_str}_Ksess}_Ksess
 	unsigned char *received_command;
 	unsigned int received_command_len;
 	if(!receive_command(cl_sd, &received_command, &received_command_len))
