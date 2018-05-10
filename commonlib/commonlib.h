@@ -27,6 +27,11 @@
 #include "SignatureMaker.h"
 
 /* ##### OpenSSL Help Functions ##### */;
+
+uint64_t generate_nonce();
+void generate_session_key(unsigned char key[]);
+void generate_iv(unsigned char iv[]);
+
 class HMACMaker {
 private:
 	HMAC_CTX* hmac_ctx;

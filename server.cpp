@@ -15,18 +15,16 @@
 #include <openssl/rand.h>
 #include <openssl/err.h>
 
+my_buffer my_buff;
+
 uint64_t sr_nonce;
 uint64_t cl_nonce;
 
 uint64_t cl_seq_num;
 uint64_t sr_seq_num;
 
-uint64_t generate_nonce()
-{
-	uint64_t nonce;
-	RAND_bytes((unsigned char*)&nonce,8);
-	return nonce;
-}
+unsigned char session_key[16];
+
 
 bool send_hello_msg(int sock) {
 	hello_msg h;
@@ -48,7 +46,7 @@ bool recv_hello_msg(int sd){
 		printf("Error receive CLIENT_HELLO\n");
 		return false;
 	} else  {
-		cl_nonce = h_msg.nonce;
+		cl_nonce = cl_seq_num = h_msg.nonce;
 		return true;
 	}
 }
@@ -58,7 +56,7 @@ int analyze_message(unsigned char* buf)
 	convert_to_host_order(buf);
  	switch( ((simple_msg*)buf)->t ) {
   		case CLIENT_HELLO:
-  			cl_nonce = ((hello_msg*)buf)->nonce;
+  			cl_nonce = cl_seq_num =((hello_msg*)buf)->nonce;
   			printf("Client nonce received: %ld\n",cl_nonce);
   			break;
 		default:
@@ -68,6 +66,105 @@ int analyze_message(unsigned char* buf)
 	return 0;
 }
 
+bool receive_command(int cl_sd, unsigned char **received_command, unsigned int* received_command_len)
+{
+	// getting iv
+	unsigned char *command_iv = new unsigned char[EVP_CIPHER_iv_length(EVP_aes_128_cbc())];
+	unsigned int command_iv_len = recv_data(cl_sd, &my_buff);
+	memcpy(command_iv, my_buff.buf, command_iv_len);
+
+	// getting {seqnum|command_str}_Ksess
+	unsigned int command_ciphertext_len = recv_data(cl_sd, &my_buff);
+	unsigned char *command_ciphertext = new unsigned char[command_ciphertext_len];
+	memcpy(command_ciphertext, my_buff.buf, command_ciphertext_len);
+
+	// getting HMAC_Ksess{seqnum|command_str}_Ksess
+	unsigned int command_hmac_len = recv_data(cl_sd, &my_buff);
+	unsigned char *command_hmac = new unsigned char[command_hmac_len];
+	memcpy(command_hmac, my_buff.buf, command_hmac_len);
+
+	// making HMAC_Ksess{seqnum|command_str}_Ksess
+	unsigned char *computed_hmac;
+	HMACMaker hm(session_key, 16);
+	hm.hash(command_ciphertext, command_ciphertext_len);
+	hm.hash_end(&computed_hmac);
+
+	if(CRYPTO_memcmp(computed_hmac, command_hmac, HMAC_LENGTH) != 0)
+	{
+		printf("HMAC authentication failed!\n");
+		return false;
+	}
+
+	printf("HMAC authentication success!\n");
+
+	// decrypt {seqnum|command_str}_Ksess
+	SymmetricCipher sc(EVP_aes_128_cbc(), session_key, command_iv);
+	unsigned char *command_plaintext;
+	unsigned int command_plainlen;
+	sc.decrypt(command_ciphertext, command_ciphertext_len);
+	sc.decrypt_end();
+	command_plainlen = sc.flush_plaintext(&command_plaintext);
+
+	// verify sequence number
+	uint64_t received_seqno;
+	memcpy((void*)&received_seqno, command_plaintext, sizeof(uint64_t));
+
+	char *command_text = (char*)&command_plaintext[sizeof(uint64_t)];
+	unsigned int command_text_len = command_plainlen - sizeof(uint64_t); // Must be checked
+
+	if(received_seqno != sr_seq_num)
+	{
+		printf("Invalid sequence number! (%lu != %lu)\n", received_seqno, sr_seq_num);
+		return false;
+	}
+
+	// increment server sequence number
+	sr_seq_num++;
+
+	// return receive command
+	*received_command = new unsigned char[command_text_len];
+	memcpy(received_command, command_text, command_text_len);
+	*received_command_len = command_text_len;
+
+	printf("Received command: %s\n", command_text);
+
+	return true;
+}
+
+bool send_command(int sd, char data_response[], unsigned int data_response_len)
+{
+	unsigned char *data_resp_iv = new unsigned char[EVP_CIPHER_iv_length(EVP_aes_128_cbc())];
+	generate_iv(data_resp_iv);
+	send_data(sd, data_resp_iv, EVP_CIPHER_iv_length(EVP_aes_128_cbc()));
+
+	SymmetricCipher sc(EVP_aes_128_cbc(), session_key, data_resp_iv);
+
+	// encrypt cl_seq_num|data_response
+	sc.encrypt((unsigned char*)&cl_seq_num, sizeof(cl_seq_num));
+	sc.encrypt((unsigned char*)data_response, data_response_len);
+	sc.encrypt_end();
+	unsigned char *command_ciphertext;
+	unsigned int command_cipherlen = sc.flush_ciphertext(&command_ciphertext);
+
+	// send {seqnum|data_response}_Ksess
+	send_data(sd, command_ciphertext, command_cipherlen);
+
+	// make hmac from {seqnum|data_response}_Ksess
+	unsigned char *hash_result;
+	unsigned int hash_len;
+
+	HMACMaker hc(session_key, 16);
+	hc.hash(command_ciphertext, command_cipherlen);
+	hash_len = hc.hash_end(&hash_result);
+
+	// send HMAC_Ksess{ eqnum|data_response}_Ksess }
+	send_data(sd, hash_result, hash_len);
+
+	// increment server sequence number
+	cl_seq_num++;
+
+	return true;
+}
 
 
 int main(int argc, char** argv)
@@ -77,7 +174,6 @@ int main(int argc, char** argv)
 	int err = 0;
 	uint16_t server_port;
 	ConnectionTCP conn;
-	my_buffer my_buff;
 	my_buff.buf = NULL;
 	my_buff.size = 0;
 	send_file_msg s_msg;
@@ -171,7 +267,6 @@ int main(int argc, char** argv)
 	pl_offset += 8;
 	printf("received_server_nonce = %ld\n", received_server_nonce);
 
-	unsigned char session_key[16];
 	memcpy(session_key, auth_plaintext + pl_offset, 16);
 	pl_offset += 16;
 
@@ -202,63 +297,16 @@ int main(int argc, char** argv)
 	send_data(cl_sd, (unsigned char*)&auth_resp_msg, sizeof(auth_resp_msg));
 
 	// 6) Receive Command
-	// getting iv
-	unsigned char *command_iv = new unsigned char[EVP_CIPHER_iv_length(EVP_aes_128_cbc())];
-	unsigned int command_iv_len = recv_data(cl_sd, &my_buff);
-	memcpy(command_iv, my_buff.buf, command_iv_len);
-
-	// getting {seqnum|command_str}_Ksess
-	unsigned int command_ciphertext_len = recv_data(cl_sd, &my_buff);
-	unsigned char *command_ciphertext = new unsigned char[command_ciphertext_len];
-	memcpy(command_ciphertext, my_buff.buf, command_ciphertext_len);
-
-	// getting HMAC_Ksess{seqnum|command_str}_Ksess
-	unsigned int command_hmac_len = recv_data(cl_sd, &my_buff);
-	unsigned char *command_hmac = new unsigned char[command_hmac_len];
-	memcpy(command_hmac, my_buff.buf, command_hmac_len);
-
-	// making HMAC_Ksess{seqnum|command_str}_Ksess
-	unsigned char *computed_hmac;
-	HMACMaker hm(session_key, 16);
-	hm.hash(command_ciphertext, command_ciphertext_len);
-	hm.hash_end(&computed_hmac);
-
-	if(CRYPTO_memcmp(computed_hmac, command_hmac, HMAC_LENGTH) != 0)
-	{
-		printf("HMAC authentication failed!\n");
+	unsigned char *received_command;
+	unsigned int received_command_len;
+	if(!receive_command(cl_sd, &received_command, &received_command_len))
 		return -1;
-	}
-
-	printf("HMAC authentication success!\n");
-
-	// decrypt {seqnum|command_str}_Ksess
-	SymmetricCipher sc(EVP_aes_128_cbc(), session_key, command_iv);
-	unsigned char *command_plaintext;
-	unsigned int command_plainlen;
-	sc.decrypt(command_ciphertext, command_ciphertext_len);
-	sc.decrypt_end();
-	command_plainlen = sc.flush_plaintext(&command_plaintext);
-
-	// verify sequence number
-	uint64_t received_seqno;
-	memcpy((void*)&received_seqno, command_plaintext, 8);
-
-	char *command_text = (char*)&command_plaintext[8];
-	unsigned int command_text_len = strlen(command_text); // MUST BE CHECKED!!!
-
-	if(received_seqno != sr_seq_num)
-	{
-		printf("Invalid sequence number!\n");
-		return -1;
-	}
-
-	// increment server sequence number
-	sr_seq_num++;
-
-	printf("Received command: %s\n", command_text);
-
 
 	// 7) Send Response
+	// send {seqnum|data_response}_Ksess | HMAC{{seqnum|data_response}_Ksess}_Ksess
+	char data_response[] = "Nun c'ho nulla\nFine risposta";
+	if(!send_command(cl_sd, data_response, strlen(data_response)+1))
+		return -1;
 
 
 	// ----------------------------------------------------------------

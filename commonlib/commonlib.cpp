@@ -54,6 +54,23 @@ void open_file_w(const char *filename, FILE **fp)
 
 /* ##### OpenSSL Help Functions ##### */
 
+uint64_t generate_nonce()
+{
+	uint64_t nonce;
+	RAND_bytes((unsigned char*)&nonce,8);
+	return nonce;
+}
+
+void generate_session_key(unsigned char key[])
+{
+	RAND_bytes(key, 16);
+}
+
+void generate_iv(unsigned char iv[])
+{
+	RAND_bytes(iv, 16);
+}
+
 HMACMaker::HMACMaker(unsigned char *key, unsigned int key_length)
 {
 	hmac_ctx = new HMAC_CTX;

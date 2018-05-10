@@ -25,23 +25,6 @@ uint64_t sr_seq_num;
 
 unsigned char session_key[16];
 
-uint64_t generate_nonce()
-{
-	uint64_t nonce;
-	RAND_bytes((unsigned char*)&nonce,8);
-	return nonce;
-}
-
-void generate_session_key(unsigned char key[])
-{
-	RAND_bytes(key, 16);
-}
-
-void generate_iv(unsigned char iv[])
-{
-	RAND_bytes(iv, 16);
-}
-
 int send_hello_msg(int sock) {
 	hello_msg h;
 	h.t = CLIENT_HELLO;
@@ -189,6 +172,70 @@ bool send_command(int sd, char command_str[], unsigned int command_len)
 	return true;
 }
 
+bool receive_str_response(int sd, unsigned char **received_data, unsigned int* received_data_len)
+{
+	// getting iv
+	unsigned char *command_iv = new unsigned char[EVP_CIPHER_iv_length(EVP_aes_128_cbc())];
+	unsigned int command_iv_len = recv_data(sd, &my_buff);
+	memcpy(command_iv, my_buff.buf, command_iv_len);
+
+	// getting {seqnum|command_str}_Ksess
+	unsigned int command_ciphertext_len = recv_data(sd, &my_buff);
+	unsigned char *command_ciphertext = new unsigned char[command_ciphertext_len];
+	memcpy(command_ciphertext, my_buff.buf, command_ciphertext_len);
+
+	// getting HMAC_Ksess{seqnum|command_str}_Ksess
+	unsigned int command_hmac_len = recv_data(sd, &my_buff);
+	unsigned char *command_hmac = new unsigned char[command_hmac_len];
+	memcpy(command_hmac, my_buff.buf, command_hmac_len);
+
+	// making HMAC_Ksess{seqnum|command_str}_Ksess
+	unsigned char *computed_hmac;
+	HMACMaker hm(session_key, 16);
+	hm.hash(command_ciphertext, command_ciphertext_len);
+	hm.hash_end(&computed_hmac);
+
+	if(CRYPTO_memcmp(computed_hmac, command_hmac, HMAC_LENGTH) != 0)
+	{
+		printf("receive_str_response: HMAC authentication failed!\n");
+		return false;
+	}
+
+	printf("receive_str_response: HMAC authentication success!\n");
+
+	// decrypt {seqnum|command_str}_Ksess
+	SymmetricCipher sc(EVP_aes_128_cbc(), session_key, command_iv);
+	unsigned char *command_plaintext;
+	unsigned int command_plainlen;
+	sc.decrypt(command_ciphertext, command_ciphertext_len);
+	sc.decrypt_end();
+	command_plainlen = sc.flush_plaintext(&command_plaintext);
+
+	// verify sequence number
+	uint64_t received_seqno;
+	memcpy((void*)&received_seqno, command_plaintext, sizeof(uint64_t));
+
+	char *data_text = (char*)&command_plaintext[sizeof(uint64_t)];
+	unsigned int data_text_len = command_plainlen - sizeof(uint64_t); // Must be checked
+
+	if(received_seqno != cl_seq_num)
+	{
+		printf("receive_str_response: Invalid sequence number! (%lu != %lu)\n", received_seqno, cl_seq_num);
+		return false;
+	}
+
+	// increment server sequence number
+	cl_seq_num++;
+
+	// return receive command
+	*received_data = new unsigned char[data_text_len];
+	memcpy(*received_data, data_text, data_text_len);
+	*received_data_len = data_text_len;
+	printf("receive_str_response: size = %u\n", data_text_len);
+
+	return true;
+}
+
 int main(int argc, char **argv)
 {
 	ERR_load_crypto_strings();
@@ -242,7 +289,12 @@ int main(int argc, char **argv)
 		return -1;
 
 	// 7) Receive Response
+	unsigned char *received_data;
+	unsigned int received_data_len;
+	if(!receive_str_response(sd, &received_data, &received_data_len))
+		return -1;
 
+	printf("Received response:\n%s\n", received_data);
 	// ----------------------------------------------------------------
 
 
