@@ -47,7 +47,7 @@ unsigned int EncryptSession::get_session_key(unsigned char **session_key)
 
 unsigned int EncryptSession::encrypt(unsigned char *sourcedata, unsigned int sourcedata_len)
 {
-	unsigned char *partial_ciphertext = new unsigned char[sourcedata_len];
+	unsigned char *partial_ciphertext = new unsigned char[sourcedata_len + 16]; //CONTROLLARE!
 
 	int outlen;
 	int evp_res = EVP_SealUpdate(ctx, partial_ciphertext, &outlen, sourcedata, sourcedata_len);
