@@ -8,7 +8,8 @@
 #include <thread>
 #include <fcntl.h>
 #include <unistd.h>
-#include<signal.h>
+#include <signal.h>
+#include <vector>
 
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
@@ -65,22 +66,28 @@ bool open_database(sqlite3 **db, const char *database_path) {
 int sd = -1; //main socket
 bool signal_close = false;
 my_buffer my_buff;
+unsigned n_sessions = 0;
 
-uint64_t sr_nonce;
-uint64_t cl_nonce;
+struct Session {
+	uint32_t session_no;
+	unsigned char session_key[16];
+	uint64_t cl_seq_num;
+	uint64_t sr_seq_num;
+	uint64_t sr_nonce;
+	uint64_t cl_nonce;
+	~Session(){
+		memset(session_key,0,16);
+	}
+};
 
-uint64_t cl_seq_num;
-uint64_t sr_seq_num;
-
-unsigned char session_key[16];
+std::vector<Session*> v_sess;
 
 
 void sig_handler(int signo)
 {
 	if (signo == SIGINT ){
 		if( sd >=0 )
-    		close(sd);
-    	memset(session_key,0,16);
+    		close(sd);    	
     	if( my_buff.buf ){
     		memset(my_buff.buf,0,my_buff.size);
     		delete[] my_buff.buf;
@@ -89,12 +96,12 @@ void sig_handler(int signo)
     }
 }
 
-bool send_hello_msg(int sock) {
+bool send_hello_msg(int sock, unsigned session_no) {
 	hello_msg h;
 	h.t = SERVER_HELLO;
-	h.nonce = sr_nonce = sr_seq_num = generate_nonce();
+	h.nonce = v_sess[session_no]->sr_nonce = v_sess[session_no]->sr_seq_num = generate_nonce();
 	convert_to_network_order(&h);
-	printf("server sends nonce: %ld\n",sr_nonce);
+	printf("server sends nonce: %ld\n",v_sess[session_no]->sr_nonce);
 	if( send_data(sock,(unsigned char*)&h, sizeof(h)) == sizeof(h) )
 		return true;
 	else
@@ -102,40 +109,25 @@ bool send_hello_msg(int sock) {
 
 }
 
-bool recv_hello_msg(int sd){
+bool recv_hello_msg(int sd, unsigned session_no){
 	hello_msg h_msg;
 	if(	!recv_msg(sd, &h_msg ,CLIENT_HELLO) )
 	{
 		printf("Error receive CLIENT_HELLO\n");
 		return false;
 	} else  {
-		cl_nonce = cl_seq_num = h_msg.nonce;
+		v_sess[session_no]->cl_nonce = v_sess[session_no]->cl_seq_num = h_msg.nonce;
 		return true;
 	}
 }
 
-int analyze_message(unsigned char* buf)
-{
-	convert_to_host_order(buf);
- 	switch( ((simple_msg*)buf)->t ) {
-  		case CLIENT_HELLO:
-  			cl_nonce = cl_seq_num =((hello_msg*)buf)->nonce;
-  			printf("Client nonce received: %ld\n",cl_nonce);
-  			break;
-		default:
-			return -2;
-	}
-
-	return 0;
-}
-
-bool send_server_verification(int cl_sd)
+bool send_server_verification(int cl_sd, unsigned session_no)
 {
 	SignatureMaker sm("keys/rsa_server_privkey.pem");
 
 	unsigned char to_sign[16];
-	memcpy(to_sign, &cl_nonce, 8);
-	memcpy(to_sign + 8, &sr_nonce, 8);
+	memcpy(to_sign, &v_sess[session_no]->cl_nonce, 8);
+	memcpy(to_sign + 8, &v_sess[session_no]->sr_nonce, 8);
 	sm.sign(to_sign, 16);
 
 	unsigned char *signature;
@@ -148,7 +140,7 @@ bool send_server_verification(int cl_sd)
 	return true;
 }
 
-bool check_client_identity(int cl_sd)
+bool check_client_identity(int cl_sd, unsigned session_no)
 {
 	// 4) Validate Client and Get Session key
 	// getting session encrypted key
@@ -200,7 +192,7 @@ bool check_client_identity(int cl_sd)
 	pl_offset += 8;
 	printf("received_server_nonce = %ld\n", received_server_nonce);
 
-	memcpy(session_key, auth_plaintext + pl_offset, 16);
+	memcpy(v_sess[session_no]->session_key, auth_plaintext + pl_offset, 16);
 	pl_offset += 16;
 
 	unsigned char *received_username = new unsigned char[auth_header_msg.username_length];
@@ -212,13 +204,13 @@ bool check_client_identity(int cl_sd)
 	pl_offset += auth_header_msg.username_length;
 
 	printf("got key:\n");
-	print_hex(session_key, 16);
+	print_hex(v_sess[session_no]->session_key, 16);
 	printf("got: username = %s, password = %s\n", received_username, received_password);
 
 	// 5) send auth result
 	simple_msg auth_resp_msg;
 
-	if(received_server_nonce != sr_nonce)
+	if(received_server_nonce != v_sess[session_no]->sr_nonce)
 	{
 		printf("error: nonces unmatch!\n");
 		auth_resp_msg.t = AUTHENTICATION_FAILED;
@@ -251,7 +243,7 @@ bool check_client_identity(int cl_sd)
 	return true;
 }
 
-bool receive_command(int cl_sd, unsigned char **received_command, unsigned int* received_command_len)
+bool receive_command(int cl_sd, unsigned char **received_command, unsigned int* received_command_len, unsigned session_no)
 {
 	// getting iv
 	unsigned char *command_iv = new unsigned char[EVP_CIPHER_iv_length(EVP_aes_128_cbc())];
@@ -270,7 +262,7 @@ bool receive_command(int cl_sd, unsigned char **received_command, unsigned int* 
 
 	// making HMAC_Ksess{seqnum|command_str}_Ksess
 	unsigned char *computed_hmac;
-	HMACMaker hm(session_key, 16);
+	HMACMaker hm(v_sess[session_no]->session_key, 16);
 	hm.hash(command_ciphertext, command_ciphertext_len);
 	hm.hash_end(&computed_hmac);
 
@@ -283,7 +275,7 @@ bool receive_command(int cl_sd, unsigned char **received_command, unsigned int* 
 	printf("HMAC authentication success!\n");
 
 	// decrypt {seqnum|command_str}_Ksess
-	SymmetricCipher sc(EVP_aes_128_cbc(), session_key, command_iv);
+	SymmetricCipher sc(EVP_aes_128_cbc(), v_sess[session_no]->session_key, command_iv);
 	unsigned char *command_plaintext;
 	unsigned int command_plainlen;
 	sc.decrypt(command_ciphertext, command_ciphertext_len);
@@ -297,14 +289,14 @@ bool receive_command(int cl_sd, unsigned char **received_command, unsigned int* 
 	char *command_text = (char*)&command_plaintext[sizeof(uint64_t)];
 	unsigned int command_text_len = command_plainlen - sizeof(uint64_t); // Must be checked
 
-	if(received_seqno != sr_seq_num)
+	if(received_seqno != v_sess[session_no]->sr_seq_num)
 	{
-		printf("Invalid sequence number! (%lu != %lu)\n", received_seqno, sr_seq_num);
+		printf("Invalid sequence number! (%lu != %lu)\n", received_seqno, v_sess[session_no]->sr_seq_num);
 		return false;
 	}
 
 	// increment server sequence number
-	sr_seq_num++;
+	v_sess[session_no]->sr_seq_num++;
 
 	// return receive command
 	*received_command = new unsigned char[command_text_len];
@@ -316,16 +308,16 @@ bool receive_command(int cl_sd, unsigned char **received_command, unsigned int* 
 	return true;
 }
 
-bool send_str_response(int sd, char data_response[], unsigned int data_response_len)
+bool send_str_response(int sd, char data_response[], unsigned int data_response_len, unsigned session_no)
 {
 	unsigned char *data_resp_iv = new unsigned char[EVP_CIPHER_iv_length(EVP_aes_128_cbc())];
 	generate_iv(data_resp_iv);
 	send_data(sd, data_resp_iv, EVP_CIPHER_iv_length(EVP_aes_128_cbc()));
 
-	SymmetricCipher sc(EVP_aes_128_cbc(), session_key, data_resp_iv);
+	SymmetricCipher sc(EVP_aes_128_cbc(), v_sess[session_no]->session_key, data_resp_iv);
 
 	// encrypt cl_seq_num|data_response
-	sc.encrypt((unsigned char*)&cl_seq_num, sizeof(cl_seq_num));
+	sc.encrypt((unsigned char*)&v_sess[session_no]->cl_seq_num, sizeof(v_sess[session_no]->cl_seq_num));
 	sc.encrypt((unsigned char*)data_response, data_response_len);
 	sc.encrypt_end();
 	unsigned char *command_ciphertext;
@@ -338,7 +330,7 @@ bool send_str_response(int sd, char data_response[], unsigned int data_response_
 	unsigned char *hash_result;
 	unsigned int hash_len;
 
-	HMACMaker hc(session_key, 16);
+	HMACMaker hc(v_sess[session_no]->session_key, 16);
 	hc.hash(command_ciphertext, command_cipherlen);
 	hash_len = hc.hash_end(&hash_result);
 
@@ -346,7 +338,7 @@ bool send_str_response(int sd, char data_response[], unsigned int data_response_
 	send_data(sd, hash_result, hash_len);
 
 	// increment server sequence number
-	cl_seq_num++;
+	v_sess[session_no]->cl_seq_num++;
 
 	return true;
 }
@@ -356,7 +348,7 @@ unsigned int divide_upper(unsigned int dividend, unsigned int divisor)
     return 1 + ((dividend - 1) / divisor);
 }
 
-bool send_file_response(int cl_sd, const char filename[])
+bool send_file_response(int cl_sd, const char filename[], unsigned session_no)
 {
 	// getting file size
 	FILE *fp;
@@ -376,11 +368,11 @@ bool send_file_response(int cl_sd, const char filename[])
 	send_data(cl_sd, (unsigned char*)&s_msg, sizeof(s_msg));
 
 	// we need to compute {seqnum|data_response}_Ksess and hash it
-	SymmetricCipher sc(EVP_aes_128_cbc(), session_key, data_resp_iv);
-	HMACMaker hc(session_key, 16);
+	SymmetricCipher sc(EVP_aes_128_cbc(), v_sess[session_no]->session_key, data_resp_iv);
+	HMACMaker hc(v_sess[session_no]->session_key, 16);
 
 	// encrypt cl_seq_num|data_response
-	sc.encrypt((unsigned char*)&cl_seq_num, sizeof(cl_seq_num));
+	sc.encrypt((unsigned char*)&v_sess[session_no]->cl_seq_num, sizeof(v_sess[session_no]->cl_seq_num));
 
 	unsigned char datachunk[CHUNK_SIZE];
 	for(unsigned int i=0; i<chunk_count; i++)
@@ -430,47 +422,52 @@ bool send_file_response(int cl_sd, const char filename[])
 	send_data(cl_sd, hash_result, hash_len);
 
 	// increment server sequence number
-	cl_seq_num++;
+	v_sess[session_no]->cl_seq_num++;
 
 	return true;
 }
 
-int handler_fun(int cl_sd){
+int handler_fun(int cl_sd, unsigned session_no){
+	v_sess.push_back(new Session());
+
 	// 1) Get Client Nonce
-	if( !recv_hello_msg(cl_sd) )
+	if( !recv_hello_msg(cl_sd, session_no) )
 		return -1;
 
 	// 2) Send Server Nonce
-	if ( !send_hello_msg(cl_sd) )
+	if ( !send_hello_msg(cl_sd, session_no) )
 		return -1;
 
 	// 3) Send Server verification infos
 	// sign {client_nonce|server_nonce}_Kpub
-	if ( !send_server_verification(cl_sd) )
+	if ( !send_server_verification(cl_sd, session_no) )
 		return -1;
 
 	// 4/5) Check Client identity / Send auth response
 	// receive {client_nonce|session key|username|password}_Kpub
 	// send authok or authfailed
-	if ( !check_client_identity(cl_sd) )
+	if ( !check_client_identity(cl_sd, session_no) )
 		return -1;
 
 	// 6) Receive Command
 	// receive {seqnum|command_str}_Ksess | HMAC{{seqnum|command_str}_Ksess}_Ksess
 	unsigned char *received_command;
 	unsigned int received_command_len;
-	if(!receive_command(cl_sd, &received_command, &received_command_len))
+	if(!receive_command(cl_sd, &received_command, &received_command_len, session_no))
 		return -1;
 
 	// 7) Send Response
 	// send {seqnum|data_response}_Ksess | HMAC{{seqnum|data_response}_Ksess}_Ksess
 	char data_response[] = "Nun c'ho nulla\nFine risposta";
-	if(!send_str_response(cl_sd, data_response, strlen(data_response)+1))
+	if(!send_str_response(cl_sd, data_response, strlen(data_response)+1, session_no))
 		return -1;
 
 	// TEST
-	send_file_response(cl_sd, "plaintext.txt");
+	send_file_response(cl_sd, "plaintext.txt",session_no);
 	close(cl_sd);
+	
+	delete v_sess[session_no];
+
 	return 0;
 }
 
@@ -505,7 +502,7 @@ int main(int argc, char** argv)
 
 	while( !signal_close ) {
 		int cl_sd = accept_tcp_server(sd,&conn);
-		std::thread threadObj(handler_fun,cl_sd);
+		std::thread threadObj(handler_fun,cl_sd,n_sessions++);
 		threadObj.detach();
 	}
 

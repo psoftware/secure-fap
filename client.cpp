@@ -132,6 +132,7 @@ bool wait_for_authentication_response(int sd)
 	return true;
 }
 
+/*
 bool send_command(int sd, char command_str[], unsigned int command_len)
 {
 	unsigned char *command_iv = new unsigned char[EVP_CIPHER_iv_length(EVP_aes_128_cbc())];
@@ -143,6 +144,43 @@ bool send_command(int sd, char command_str[], unsigned int command_len)
 	// encrypt sr_seq_num|command_str
 	sc.encrypt((unsigned char*)&sr_seq_num, sizeof(sr_seq_num));
 	sc.encrypt((unsigned char*)command_str, command_len);
+	sc.encrypt_end();
+	unsigned char *command_ciphertext;
+	unsigned int command_cipherlen = sc.flush_ciphertext(&command_ciphertext);
+
+	// send {seqnum|command_str}_Ksess
+	send_data(sd, command_ciphertext, command_cipherlen);
+
+	// make hmac from {seqnum|command_str}_Ksess
+	unsigned char *hash_result;
+	unsigned int hash_len;
+
+	HMACMaker hc(session_key, 16);
+	hc.hash(command_ciphertext, command_cipherlen);
+	hash_len = hc.hash_end(&hash_result);
+
+	// send HMAC_Ksess{ eqnum|command_str}_Ksess }
+	send_data(sd, hash_result, hash_len);
+
+	// increment server sequence number
+	sr_seq_num++;
+
+	return true;
+}*/
+
+bool send_command(int sd, void *msg_str, size_t msg_len)
+{
+	unsigned char *command_iv = new unsigned char[EVP_CIPHER_iv_length(EVP_aes_128_cbc())];
+	generate_iv(command_iv);
+	send_data(sd, command_iv, EVP_CIPHER_iv_length(EVP_aes_128_cbc()));
+
+	SymmetricCipher sc(EVP_aes_128_cbc(), session_key, command_iv);
+
+	convert_to_network_order(msg_str);
+
+	// encrypt sr_seq_num|command_str
+	sc.encrypt((unsigned char*)&sr_seq_num, sizeof(sr_seq_num));
+	sc.encrypt((unsigned char*)msg_str, msg_len);
 	sc.encrypt_end();
 	unsigned char *command_ciphertext;
 	unsigned int command_cipherlen = sc.flush_ciphertext(&command_ciphertext);
@@ -381,8 +419,9 @@ int main(int argc, char **argv)
 
 	// 6) Send Command
 	// send {seqnum|command_str}_Ksess | HMAC{{seqnum|command_str}_Ksess}_Ksess
-	char command_str[] = "DOWNLOAD 4kporn.mkv";
-	if(!send_command(sd, command_str, sizeof(command_str)))
+	//char command_str[] = "DOWNLOAD 4kporn.mkv";
+	download_file cmd = {DOWNLOAD_FILE,1};
+	if(!send_command(sd, &cmd, sizeof(cmd)))
 		return -1;
 
 	// 7) Receive Response
