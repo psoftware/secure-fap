@@ -297,11 +297,11 @@ bool receive_command(int cl_sd, unsigned char **received_command, unsigned int* 
 
 	// return receive command
 	*received_command = new unsigned char[command_text_len];
-	memcpy(received_command, command_text, command_text_len);
+	memcpy(*received_command, command_text, command_text_len);
 	*received_command_len = command_text_len;
 
-	printf("Received command: %s\n", command_text);
-
+	//printf("Received command: %s\n", command_text);
+	printf("Received command. received_command:%d command_text_len:%d\n",*received_command,command_text_len);
 	return true;
 }
 
@@ -448,16 +448,28 @@ int handler_fun(int cl_sd, unsigned session_no){
 
 	// 6) Receive Command
 	// receive {seqnum|command_str}_Ksess | HMAC{{seqnum|command_str}_Ksess}_Ksess
-	unsigned char *received_command;
+	unsigned char *received_command = NULL;
 	unsigned int received_command_len;
-	if(!receive_command(cl_sd, &received_command, &received_command_len, session_no))
+	if(!receive_command(cl_sd, &received_command, &received_command_len, session_no)){
+		printf("error received_command\n");
 		return -1;
-
+	}
 	// 7) Send Response
 	// send {seqnum|data_response}_Ksess | HMAC{{seqnum|data_response}_Ksess}_Ksess
-	char data_response[] = "Nun c'ho nulla\nFine risposta";
-	if(!send_str_response(cl_sd, data_response, strlen(data_response)+1, session_no))
-		return -1;
+	if( convert_to_host_order(received_command) == -1 ){
+		printf("Invalid msg received from client. session_no:%u\n",session_no);
+	} 
+
+	//char data_response[] = "Nun c'ho nulla\nFine risposta";
+	char *data_response;
+	if( ((simple_msg*)received_command)->t == LIST_FILE ){
+		printf("client %d LIST_FILE\n",session_no);
+		std::string s = show_dir_content("./files/"); // aggiustare
+		data_response = new char[s.length()+1];
+		memcpy(data_response,s.c_str(),s.length()+1);
+	}
+	if( !send_str_response(cl_sd, data_response, strlen(data_response)+1, session_no) )
+			return -1;
 
 	// TEST
 	send_file_response(cl_sd, "plaintext.txt",session_no);

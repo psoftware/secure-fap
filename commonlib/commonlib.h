@@ -9,7 +9,7 @@
 #include <dirent.h> 
 #include <fcntl.h>
 #include <unistd.h>
-
+#include <string>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/rand.h>
@@ -26,6 +26,7 @@
 #include "SymmetricCipher.h"
 #include "SignatureVerifier.h"
 #include "SignatureMaker.h"
+#include "DynamicArray.h"
 
 /* ##### OpenSSL Help Functions ##### */;
 
@@ -63,7 +64,7 @@ void open_file_w(const char *filename, FILE **fp);
 
 // Server functions
 int initialize_server_socket(const char * bind_addr, int port);
-void show_dir_content(const char * path);
+std::string show_dir_content(const char * path);
 bool recv_msg(int sd, void *s_msg, message_type expected);
 
 #endif

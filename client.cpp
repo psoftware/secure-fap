@@ -185,6 +185,7 @@ bool send_command(int sd, void *msg_str, size_t msg_len)
 	unsigned char *command_ciphertext;
 	unsigned int command_cipherlen = sc.flush_ciphertext(&command_ciphertext);
 
+	printf("command_cipherlen:%d\n",command_cipherlen);
 	// send {seqnum|command_str}_Ksess
 	send_data(sd, command_ciphertext, command_cipherlen);
 
@@ -420,7 +421,8 @@ int main(int argc, char **argv)
 	// 6) Send Command
 	// send {seqnum|command_str}_Ksess | HMAC{{seqnum|command_str}_Ksess}_Ksess
 	//char command_str[] = "DOWNLOAD 4kporn.mkv";
-	download_file cmd = {DOWNLOAD_FILE,1};
+	//download_file cmd = {DOWNLOAD_FILE,1};
+	simple_msg cmd = {LIST_FILE};
 	if(!send_command(sd, &cmd, sizeof(cmd)))
 		return -1;
 
