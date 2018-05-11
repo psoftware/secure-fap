@@ -1,5 +1,5 @@
 COMMONLIB_OBJ = commonlib/net_wrapper.o commonlib/messages.o commonlib/commonlib.o commonlib/SymmetricCipher.o commonlib/EncryptSession.o commonlib/DecryptSession.o commonlib/SignatureVerifier.o commonlib/SignatureMaker.o commonlib/DynamicArray.o
-COMMON_FLAGS = -std=c++11 -g -pthread
+COMMON_FLAGS = -std=c++14 -g -pthread
 
 all: client server database.sqlite3
 

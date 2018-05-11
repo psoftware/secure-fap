@@ -156,3 +156,11 @@ std::string show_dir_content(const char * path)
 	}
 	return s;
 }
+
+/*std::string get_dir_content(std::string path)
+{
+	std::string s = "";
+    for (auto & p : fs::directory_iterator(path))
+       s += p + "\n";
+   return s;
+}*/

@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <string>
+//#include <filesystem>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/rand.h>
@@ -65,6 +66,7 @@ void open_file_w(const char *filename, FILE **fp);
 // Server functions
 int initialize_server_socket(const char * bind_addr, int port);
 std::string show_dir_content(const char * path);
+//std::string get_dir_content(std::string path); //C++17
 bool recv_msg(int sd, void *s_msg, message_type expected);
 
 #endif
