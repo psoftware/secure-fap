@@ -17,6 +17,7 @@
 #include <openssl/rand.h>
 #include <openssl/err.h>
 
+#include <stdexcept>
 
 // ---------------------------- Database Helpers ------------------------------------
 #include <sqlite3.h>
@@ -424,6 +425,25 @@ bool send_file_response(int cl_sd, const char filename[], unsigned session_no)
 	return true;
 }
 
+void list_command_response(int cl_sd, unsigned session_no)
+{
+	char *data_response;
+	printf("client %d LIST_FILE\n",session_no);
+	std::string s = show_dir_content("./files/"); // aggiustare
+	data_response = new char[s.length()+1];
+	memcpy(data_response,s.c_str(),s.length()+1);
+
+	if( !send_str_response(cl_sd, data_response, strlen(data_response)+1, session_no) )
+		throw std::runtime_error("cannot send response");
+}
+
+void download_command_response(int cl_sd, unsigned session_no, download_file* dwn_header)
+{
+	if(!send_file_response(cl_sd, "files/file.txt", session_no))
+		throw std::runtime_error("cannot send file data");
+}
+
+
 int handler_fun(int cl_sd, unsigned session_no){
 	v_sess.push_back(new Session());
 
@@ -446,33 +466,28 @@ int handler_fun(int cl_sd, unsigned session_no){
 	if ( !check_client_identity(cl_sd, session_no) )
 		return -1;
 
-	// 6) Receive Command
-	// receive {seqnum|command_str}_Ksess | HMAC{{seqnum|command_str}_Ksess}_Ksess
-	unsigned char *received_command = NULL;
-	unsigned int received_command_len;
-	if(!receive_command(cl_sd, &received_command, &received_command_len, session_no)){
-		printf("error received_command\n");
-		return -1;
-	}
-	// 7) Send Response
-	// send {seqnum|data_response}_Ksess | HMAC{{seqnum|data_response}_Ksess}_Ksess
-	if( convert_to_host_order(received_command) == -1 ){
-		printf("Invalid msg received from client. session_no:%u\n",session_no);
-	} 
-
-	//char data_response[] = "Nun c'ho nulla\nFine risposta";
-	char *data_response;
-	if( ((simple_msg*)received_command)->t == LIST_FILE ){
-		printf("client %d LIST_FILE\n",session_no);
-		std::string s = show_dir_content("./files/"); // aggiustare
-		data_response = new char[s.length()+1];
-		memcpy(data_response,s.c_str(),s.length()+1);
-	}
-	if( !send_str_response(cl_sd, data_response, strlen(data_response)+1, session_no) )
+	while(true)
+	{
+		// 6) Receive Command
+		// receive {seqnum|command_str}_Ksess | HMAC{{seqnum|command_str}_Ksess}_Ksess
+		unsigned char *received_command = NULL;
+		unsigned int received_command_len;
+		if(!receive_command(cl_sd, &received_command, &received_command_len, session_no)){
+			printf("error received_command\n");
 			return -1;
+		}
+		// 7) Send Response
+		// send {seqnum|data_response}_Ksess | HMAC{{seqnum|data_response}_Ksess}_Ksess
+		if( convert_to_host_order(received_command) == -1 ){
+			printf("Invalid msg received from client. session_no:%u\n",session_no);
+		}
 
-	// TEST
-	send_file_response(cl_sd, "plaintext.txt",session_no);
+		if(((simple_msg*)received_command)->t == LIST_FILE)
+			list_command_response(cl_sd, session_no);
+		else if(((simple_msg*)received_command)->t == DOWNLOAD_FILE)
+			download_command_response(cl_sd, session_no, (download_file*)received_command);
+	}
+
 	close(cl_sd);
 
 	delete v_sess[session_no];

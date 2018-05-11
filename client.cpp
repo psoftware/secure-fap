@@ -15,7 +15,10 @@
 #include <openssl/rand.h>
 #include <openssl/err.h>
 
+#include <iostream>
 #include <stdexcept>
+
+using namespace std;
 
 // --------- Console Functions ----------
 #include <stdlib.h>
@@ -300,10 +303,10 @@ bool receive_str_response(int sd, unsigned char **received_data, unsigned int* r
 	return true;
 }
 
-bool receive_file_response(int sd)
+bool receive_file_response(int sd, const char filename[])
 {
 	FILE *fp;
-	open_file_w("ricevuto.txt", &fp);
+	open_file_w(filename, &fp);
 
 	// getting iv
 	unsigned char *iv = new unsigned char[EVP_CIPHER_iv_length(EVP_aes_128_cbc())];
@@ -402,6 +405,44 @@ bool receive_file_response(int sd)
 	return true;
 }
 
+void list_command(int sd, string parameters)
+{
+	// 6) Send Command
+	// send {seqnum|command_str}_Ksess | HMAC{{seqnum|command_str}_Ksess}_Ksess
+	simple_msg cmd = {LIST_FILE};
+	if(!send_command(sd, &cmd, sizeof(cmd)))
+		throw runtime_error("cannot send command");
+
+	// 7) Receive Response
+	// receive {seqnum|data}_Ksess | HMAC{{seqnum|data}_Ksess}_Ksess
+	unsigned char *received_data;
+	unsigned int received_data_len;
+	if(!receive_str_response(sd, &received_data, &received_data_len) || received_data_len == 0)
+		throw runtime_error("cannot receive response");
+
+	received_data[received_data_len-1] = '\0';
+	printf("%s", received_data);
+}
+
+void download_command(int sd, string parameters)
+{
+	unsigned int file_index = 0;
+	try {
+		file_index = std::stoi(parameters);
+	} catch(...) {
+		cout << "invalid argument" << endl;
+		return;
+	}
+
+	// 6) Send Command
+	// send {seqnum|command_str}_Ksess | HMAC{{seqnum|command_str}_Ksess}_Ksess
+	download_file cmd = {DOWNLOAD_FILE, file_index};
+	if(!send_command(sd, &cmd, sizeof(cmd)))
+		throw runtime_error("cannot send command");
+
+	receive_file_response(sd, parameters.c_str());
+}
+
 int main(int argc, char **argv)
 {
 	ERR_load_crypto_strings();
@@ -464,24 +505,28 @@ int main(int argc, char **argv)
 
 	printf("Authentication success!\n");
 
-	// 6) Send Command
-	// send {seqnum|command_str}_Ksess | HMAC{{seqnum|command_str}_Ksess}_Ksess
-	//char command_str[] = "DOWNLOAD 4kporn.mkv";
-	//download_file cmd = {DOWNLOAD_FILE,1};
-	simple_msg cmd = {LIST_FILE};
-	if(!send_command(sd, &cmd, sizeof(cmd)))
-		return -1;
+	cin.ignore();
+	while(true)
+	{
+		cout << "server$ " << flush;
 
-	// 7) Receive Response
-	unsigned char *received_data;
-	unsigned int received_data_len;
-	if(!receive_str_response(sd, &received_data, &received_data_len))
-		return -1;
+		string entered_string;
+		if(!(std::getline(std::cin, entered_string)))
+			return -1;
 
-	printf("Received response:\n%s\n", received_data);
+		// extract command and parameter
+		std::string cmd_str = entered_string.substr(0, entered_string.find(string(" ")));
+		entered_string.erase(0, entered_string.find(" ") + 1);
+		std::string params_str(entered_string);
+		cout << "cmd_str:" << cmd_str << " params_str:" << params_str << endl;
 
-	// TEST
-	receive_file_response(sd);
+		if(cmd_str == "list")
+			list_command(sd, params_str);
+		else if(cmd_str == "download")
+			download_command(sd, params_str);
+		else
+			cout << "unrecognized command" << endl;
+	}
 
 	close(sd);
 
