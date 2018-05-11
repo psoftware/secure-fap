@@ -368,8 +368,8 @@ int main(int argc, char **argv)
 
 	// 4) Send client verification infos and KeySession
 	// send {client_nonce|session key|username|password}_Kpub
-	char auth_username[] = "username";
-	char auth_secret[] = "passwordbella";
+	char auth_username[] = "antonio";
+	char auth_secret[] = "provaantonio";
 	if(!send_client_identification(sd, auth_username, auth_secret))
 		return -1;
 

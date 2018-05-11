@@ -3,6 +3,9 @@ server
 test
 *.o
 
+# Database
+database.sqlite3
+
 # Certificates must be regenerated
 keys/
 *.pem

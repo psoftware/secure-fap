@@ -71,6 +71,27 @@ void generate_iv(unsigned char iv[])
 	RAND_bytes(iv, 16);
 }
 
+bool compute_SHA256(void* input, unsigned long length, unsigned char* md)
+{
+	SHA256_CTX context;
+	if(!SHA256_Init(&context))
+		return false;
+
+	if(!SHA256_Update(&context, (unsigned char*)input, length))
+		return false;
+
+	if(!SHA256_Final(md, &context))
+		return false;
+
+	return true;
+}
+
+void SHA1hash_to_string(unsigned char *hashbin, char *hashstr) {
+	for(int i = 0; i<32; i++)
+		sprintf(&hashstr[i*2], "%02x", hashbin[i]);
+	hashstr[64]='\0';
+}
+
 HMACMaker::HMACMaker(unsigned char *key, unsigned int key_length)
 {
 	hmac_ctx = new HMAC_CTX;

@@ -15,6 +15,52 @@
 #include <openssl/rand.h>
 #include <openssl/err.h>
 
+
+// ---------------------------- Database Helpers ------------------------------------
+#include <sqlite3.h>
+
+sqlite3 *database;
+
+bool sqlite_check_password(sqlite3 *db, char *username, char *hashed_password)
+{
+	char prepared_sql[] = "SELECT COUNT(*) FROM users WHERE username = ? AND password = ?;";
+
+	sqlite3_stmt *stmt = NULL;
+	int rc = sqlite3_prepare_v2(db, prepared_sql, -1, &stmt, NULL);
+	if (rc != SQLITE_OK) {
+		printf("sqlite_check_password: prepare error!\n");
+		return false;
+	}
+
+	if( sqlite3_bind_text(stmt, 1, username, strlen(username), SQLITE_STATIC) ||
+		sqlite3_bind_text(stmt, 2, hashed_password, strlen(hashed_password), SQLITE_STATIC))
+	{
+		printf("sqlite_check_password: prepare error!\n");
+		return false;
+	}
+
+	rc = sqlite3_step(stmt);
+	// int colCount = sqlite3_column_count(stmt);
+	// int type = sqlite3_column_type(stmt, 0);
+	int valInt = sqlite3_column_int(stmt, 0);
+
+	rc = sqlite3_finalize(stmt);
+
+	return valInt;
+}
+
+bool open_database(sqlite3 **db, const char *database_path) {
+	int rc = sqlite3_open(database_path, db);
+	if(rc) {
+		printf("Can't open database: %s\n", sqlite3_errmsg(*db));
+		sqlite3_close(*db);
+		return false;
+	}
+
+	return true;
+}
+// ----------------------------------------------------------------------------------
+
 my_buffer my_buff;
 
 uint64_t sr_nonce;
@@ -162,6 +208,25 @@ bool check_client_identity(int cl_sd)
 		send_data(cl_sd, (unsigned char*)&auth_resp_msg, sizeof(auth_resp_msg));
 		return false;
 	}
+
+	// compute SHA256 password hash
+	unsigned char hash_result[32];
+	if(!compute_SHA256(received_password, auth_header_msg.password_length - 1, hash_result))
+		return false;
+
+	char hash_hex_result[64 + 1];
+	SHA1hash_to_string(hash_result, hash_hex_result);
+	//printf("Hash: %s\n", hash_hex_result);
+
+	if(!sqlite_check_password(database, (char*)received_username, hash_hex_result))
+	{
+		printf("error: login failed!\n");
+		auth_resp_msg.t = AUTHENTICATION_FAILED;
+		send_data(cl_sd, (unsigned char*)&auth_resp_msg, sizeof(auth_resp_msg));
+		return false;
+	}
+
+	printf("Client authentication success!\n");
 
 	auth_resp_msg.t = AUTHENTICATION_OK;
 	send_data(cl_sd, (unsigned char*)&auth_resp_msg, sizeof(auth_resp_msg));
@@ -369,6 +434,11 @@ int main(int argc, char** argv)
 	}
 
 	sscanf(argv[1],"%hd",&server_port);
+
+	if(!open_database(&database, "database.sqlite3")) {
+		printf("error: failed to open database\n");
+		return -1;
+	}
 
 	int sd = open_tcp_server(server_port);
 	int cl_sd = accept_tcp_server(sd,&conn);

@@ -32,6 +32,9 @@ uint64_t generate_nonce();
 void generate_session_key(unsigned char key[]);
 void generate_iv(unsigned char iv[]);
 
+bool compute_SHA256(void* input, unsigned long length, unsigned char* md);
+void SHA1hash_to_string(unsigned char *hashbin, char *hashstr);
+
 class HMACMaker {
 private:
 	HMAC_CTX* hmac_ctx;

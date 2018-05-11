@@ -1,12 +1,15 @@
 COMMONLIB_OBJ = commonlib/net_wrapper.o commonlib/messages.o commonlib/commonlib.o commonlib/SymmetricCipher.o commonlib/EncryptSession.o commonlib/DecryptSession.o commonlib/SignatureVerifier.o commonlib/SignatureMaker.o commonlib/DynamicArray.o
 
-all: client server
+all: client server database.sqlite3
+
+database.sqlite3: script.sql
+	sqlite3 database.sqlite3 < script.sql
 
 client: client.o $(COMMONLIB_OBJ)
 	g++ client.o $(COMMONLIB_OBJ) -o client -lcrypto -g
 
 server: server.o $(COMMONLIB_OBJ)
-	g++ server.o $(COMMONLIB_OBJ) -o server -lcrypto -g
+	g++ server.o $(COMMONLIB_OBJ) -o server -lcrypto -g -lsqlite3
 
 client.o: client.cpp
 	g++ -c -g -Wall client.cpp -o client.o
@@ -45,4 +48,4 @@ commonlib/DynamicArray.o: commonlib/DynamicArray.cpp commonlib/DynamicArray.h
 	g++ -c -g commonlib/DynamicArray.cpp -o commonlib/DynamicArray.o
 
 clean:
-	rm -f client server *.o commonlib/*.o
+	rm -f client server *.o commonlib/*.o database.sqlite3
