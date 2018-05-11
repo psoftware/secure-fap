@@ -17,6 +17,7 @@ typedef enum
 	AUTHENTICATION_FAILED,
 	LIST_FILE,
 	SEND_FILE,
+	DOWNLOAD_FILE,
 	QUIT_SESSION,
 } message_type;
 
@@ -49,12 +50,11 @@ typedef struct send_file_msg_t
 	uint32_t chunk_number;
 }__attribute__((packed)) send_file_msg;
 
-typedef struct client_authentication_t
+typedef struct download_file_t
 {
 	message_type t;
-	char username[32];
-	char password[64];
-} __attribute__((packed)) client_authentication;
+	uint32_t file_id;
+}__attribute__((packed)) download_file;
 
 #ifdef __cplusplus
 extern "C" {

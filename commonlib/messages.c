@@ -29,6 +29,10 @@ void convert_to_network_order( void* msg )
 			((hello_msg*)msg)->t = htonl(((hello_msg*)msg)->t);
 			((hello_msg*)msg)->nonce = HTONLL(((hello_msg*)msg)->nonce);
 			break;
+		case DOWNLOAD_FILE:
+			((download_file*)msg)->t = htonl(((download_file*)msg)->t);
+			((download_file*)msg)->file_id = htonl(((download_file*)msg)->file_id);
+			break;
 		case SEND_FILE:
 			((send_file_msg*)msg)->t = htonl(((send_file_msg*)msg)->t);
 			((send_file_msg*)msg)->chunk_size = htonl(((send_file_msg*)msg)->chunk_size);
@@ -64,6 +68,9 @@ int convert_to_host_order( void* msg )
 		case CLIENT_HELLO:
 		case SERVER_HELLO:
 			((hello_msg*)msg)->nonce = NTOHLL(((hello_msg*)msg)->nonce);
+			break;
+		case DOWNLOAD_FILE:
+			((download_file*)msg)->file_id = ntohl(((download_file*)msg)->file_id);
 			break;
 		case SEND_FILE:
 			((send_file_msg*)msg)->chunk_size = ntohl(((send_file_msg*)msg)->chunk_size);
