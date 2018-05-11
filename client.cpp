@@ -15,6 +15,36 @@
 #include <openssl/rand.h>
 #include <openssl/err.h>
 
+#include <stdexcept>
+
+// --------- Console Functions ----------
+#include <stdlib.h>
+#include <termios.h>
+
+struct termios oflags, nflags;
+
+void disable_console_echo()
+{
+	tcgetattr(fileno(stdin), &oflags);
+	nflags = oflags;
+	nflags.c_lflag &= ~ECHO;
+	nflags.c_lflag |= ECHONL;
+
+	if (tcsetattr(fileno(stdin), TCSANOW, &nflags) != 0) {
+		throw std::runtime_error("can't disable echo");
+	}
+}
+
+void enable_console_echo()
+{
+	if (tcsetattr(fileno(stdin), TCSANOW, &oflags) != 0) {
+		perror("tcsetattr");
+		throw std::runtime_error("can't enable echo");
+	}
+}
+
+// --------------------------------------
+
 my_buffer my_buff;
 
 uint64_t cl_nonce;
@@ -407,8 +437,24 @@ int main(int argc, char **argv)
 
 	// 4) Send client verification infos and KeySession
 	// send {client_nonce|session key|username|password}_Kpub
-	char auth_username[] = "antonio";
-	char auth_secret[] = "provaantonio";
+
+	// ask for credentials
+	char *auth_username = NULL;
+	char *auth_secret = NULL;
+	printf("Username: ");
+	fflush(stdout);
+	scanf("%ms", &auth_username);
+	if(!auth_username)
+		return -1;
+
+	printf("Password: ");
+	fflush(stdout);
+	disable_console_echo();
+	scanf("%ms", &auth_secret);
+	enable_console_echo();
+	if(!auth_secret)
+		return -1;
+
 	if(!send_client_identification(sd, auth_username, auth_secret))
 		return -1;
 
