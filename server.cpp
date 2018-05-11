@@ -93,16 +93,6 @@ struct Session {
 
 std::vector<Session*> v_sess;
 
-
-void sig_handler(int signo)
-{
-	if (signo == SIGINT ){
-		if( sd >=0 )
-    		close(sd);    	
-    	signal_close = true;
-    }
-}
-
 bool send_hello_msg(int sock, unsigned session_no) {
 	hello_msg h;
 	h.t = SERVER_HELLO;
@@ -478,6 +468,10 @@ int handler_fun(int cl_sd, unsigned session_no){
 	return 0;
 }
 
+void close_all(void){
+	close(sd);
+}
+
 int main(int argc, char** argv)
 {
 	ERR_load_crypto_strings();
@@ -489,11 +483,9 @@ int main(int argc, char** argv)
 		printf("use: ./server port");
 		return -1;
 	}
-
-	if( signal(SIGINT, sig_handler) == SIG_ERR )
-		printf("can't catch SIGINT\n");
-
-	sscanf(argv[1],"%hd",&server_port);
+	sscanf(argv[1],"%hd",&server_port);	
+	
+	atexit(close_all);
 
 	if( !open_database(&database, "database.sqlite3") ) {
 		printf("error: failed to open database\n");
@@ -505,7 +497,7 @@ int main(int argc, char** argv)
 		return -1;
 	}
 
-	while( !signal_close ) {
+	while( 1 ) {
 		int cl_sd = accept_tcp_server(sd,&conn);
 		std::thread threadObj(handler_fun,cl_sd,n_sessions++);
 		threadObj.detach();
