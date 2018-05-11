@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <vector>
-
+#include <mutex>
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
@@ -21,6 +21,8 @@
 // ---------------------------- Database Helpers ------------------------------------
 #include <sqlite3.h>
 
+
+std::mutex sql_mutex;
 sqlite3 *database;
 
 bool sqlite_check_password(sqlite3 *db, char *username, char *hashed_password)
@@ -28,6 +30,8 @@ bool sqlite_check_password(sqlite3 *db, char *username, char *hashed_password)
 	char prepared_sql[] = "SELECT COUNT(*) FROM users WHERE username = ? AND password = ?;";
 
 	sqlite3_stmt *stmt = NULL;
+	
+	sql_mutex.lock();
 	int rc = sqlite3_prepare_v2(db, prepared_sql, -1, &stmt, NULL);
 	if (rc != SQLITE_OK) {
 		printf("sqlite_check_password: prepare error!\n");
@@ -47,6 +51,7 @@ bool sqlite_check_password(sqlite3 *db, char *username, char *hashed_password)
 	int valInt = sqlite3_column_int(stmt, 0);
 
 	rc = sqlite3_finalize(stmt);
+	sql_mutex.unlock();
 
 	return valInt;
 }
