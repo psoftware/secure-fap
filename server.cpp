@@ -301,7 +301,7 @@ bool receive_command(int cl_sd, unsigned char **received_command, unsigned int* 
 	*received_command_len = command_text_len;
 
 	//printf("Received command: %s\n", command_text);
-	printf("Received command. received_command:%d command_text_len:%d\n",*received_command,command_text_len);
+	printf("Received command. command_text_len:%d\n", command_text_len);
 	return true;
 }
 
