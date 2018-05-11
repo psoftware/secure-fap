@@ -5,9 +5,10 @@
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
-
+#include <thread>
 #include <fcntl.h>
 #include <unistd.h>
+#include<signal.h>
 
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
@@ -61,6 +62,8 @@ bool open_database(sqlite3 **db, const char *database_path) {
 }
 // ----------------------------------------------------------------------------------
 
+int sd = -1; //main socket
+bool signal_close = false;
 my_buffer my_buff;
 
 uint64_t sr_nonce;
@@ -71,6 +74,20 @@ uint64_t sr_seq_num;
 
 unsigned char session_key[16];
 
+
+void sig_handler(int signo)
+{
+	if (signo == SIGINT ){
+		if( sd >=0 )
+    		close(sd);
+    	memset(session_key,0,16);
+    	if( my_buff.buf ){
+    		memset(my_buff.buf,0,my_buff.size);
+    		delete[] my_buff.buf;
+    	}	
+    	signal_close = true;
+    }
+}
 
 bool send_hello_msg(int sock) {
 	hello_msg h;
@@ -418,31 +435,7 @@ bool send_file_response(int cl_sd, const char filename[])
 	return true;
 }
 
-
-int main(int argc, char** argv)
-{
-	ERR_load_crypto_strings();
-
-	uint16_t server_port;
-	ConnectionTCP conn;
-	my_buff.buf = NULL;
-	my_buff.size = 0;
-
-	if( argc < 2 ){
-		printf("use: ./server port");
-		return -1;
-	}
-
-	sscanf(argv[1],"%hd",&server_port);
-
-	if(!open_database(&database, "database.sqlite3")) {
-		printf("error: failed to open database\n");
-		return -1;
-	}
-
-	int sd = open_tcp_server(server_port);
-	int cl_sd = accept_tcp_server(sd,&conn);
-
+int handler_fun(int cl_sd){
 	// 1) Get Client Nonce
 	if( !recv_hello_msg(cl_sd) )
 		return -1;
@@ -477,6 +470,44 @@ int main(int argc, char** argv)
 
 	// TEST
 	send_file_response(cl_sd, "plaintext.txt");
-
 	close(cl_sd);
+	return 0;
+}
+
+int main(int argc, char** argv)
+{
+	ERR_load_crypto_strings();
+
+	uint16_t server_port;
+	ConnectionTCP conn;
+	my_buff.buf = NULL;
+	my_buff.size = 0;
+
+	if( argc < 2 ){
+		printf("use: ./server port");
+		return -1;
+	}
+
+	if( signal(SIGINT, sig_handler) == SIG_ERR )
+		printf("can't catch SIGINT\n");
+
+	sscanf(argv[1],"%hd",&server_port);
+
+	if( !open_database(&database, "database.sqlite3") ) {
+		printf("error: failed to open database\n");
+		return -1;
+	}
+
+	sd = open_tcp_server(server_port);
+	if( sd == -1 ){
+		return -1;
+	}
+
+	while( !signal_close ) {
+		int cl_sd = accept_tcp_server(sd,&conn);
+		std::thread threadObj(handler_fun,cl_sd);
+		threadObj.detach();
+	}
+
+	return 0;
 }
