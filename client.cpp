@@ -345,12 +345,12 @@ int main(int argc, char **argv)
 
 	// Parsing parameters
 	if( argc < 3 ){
-		perror("use: ./client filename server_ip port");
+		perror("use: ./client server_ip port");
 		return -1;
 	}
-	sscanf(argv[3],"%hd",&server_port);
+	sscanf(argv[2],"%hd",&server_port);
 
-	sd = start_tcp_connection(argv[2], server_port);
+	sd = start_tcp_connection(argv[1], server_port);
 	if( sd < 0 )
 		return -1;
 
