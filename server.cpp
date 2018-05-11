@@ -65,7 +65,6 @@ bool open_database(sqlite3 **db, const char *database_path) {
 
 int sd = -1; //main socket
 bool signal_close = false;
-my_buffer my_buff;
 unsigned n_sessions = 0;
 
 struct Session {
@@ -75,8 +74,15 @@ struct Session {
 	uint64_t sr_seq_num;
 	uint64_t sr_nonce;
 	uint64_t cl_nonce;
+	my_buffer my_buff;
+	Session(){
+		my_buff.buf = NULL;
+		my_buff.size = 0;
+	}
 	~Session(){
+		// destroy session_key
 		memset(session_key,0,16);
+		delete[] my_buff.buf;
 	}
 };
 
@@ -88,10 +94,6 @@ void sig_handler(int signo)
 	if (signo == SIGINT ){
 		if( sd >=0 )
     		close(sd);    	
-    	if( my_buff.buf ){
-    		memset(my_buff.buf,0,my_buff.size);
-    		delete[] my_buff.buf;
-    	}	
     	signal_close = true;
     }
 }
@@ -144,29 +146,29 @@ bool check_client_identity(int cl_sd, unsigned session_no)
 {
 	// 4) Validate Client and Get Session key
 	// getting session encrypted key
-	unsigned int auth_encrypted_key_len = recv_data(cl_sd, &my_buff);
+	unsigned int auth_encrypted_key_len = recv_data(cl_sd, &v_sess[session_no]->my_buff);
 	if(auth_encrypted_key_len > 10000)
 	{
 		printf("error: auth_encrypted_key_len = %u invalid size!\n", auth_encrypted_key_len);
 		return false;
 	}
 	unsigned char *auth_encrypted_key = new unsigned char[auth_encrypted_key_len];
-	memcpy(auth_encrypted_key, my_buff.buf, auth_encrypted_key_len);
+	memcpy(auth_encrypted_key, v_sess[session_no]->my_buff.buf, auth_encrypted_key_len);
 
 	// getting session iv
 	unsigned char *auth_iv = new unsigned char[EVP_CIPHER_iv_length(EVP_aes_128_cbc())];
-	unsigned int auth_iv_len = recv_data(cl_sd, &my_buff);
+	unsigned int auth_iv_len = recv_data(cl_sd, &v_sess[session_no]->my_buff);
 	if((int)auth_iv_len != EVP_CIPHER_iv_length(EVP_aes_128_cbc())) {
 		printf("error: auth_iv_len = %u instead of %d!\n", auth_iv_len, EVP_CIPHER_iv_length(EVP_aes_128_cbc()));
 		return false;
 	}
-	memcpy(auth_iv, my_buff.buf, auth_iv_len);
+	memcpy(auth_iv, v_sess[session_no]->my_buff.buf, auth_iv_len);
 
 
 	// getting client authentication header
 	client_auth auth_header_msg;
-	recv_data(cl_sd, &my_buff);
-	memcpy(&auth_header_msg, my_buff.buf, sizeof(auth_header_msg));
+	recv_data(cl_sd, &v_sess[session_no]->my_buff);
+	memcpy(&auth_header_msg, v_sess[session_no]->my_buff.buf, sizeof(auth_header_msg));
 	convert_to_host_order(&auth_header_msg);
 
 	printf("client header: ciphertext_len = %u, username_length = %u, password_length = %u\n",
@@ -175,12 +177,12 @@ bool check_client_identity(int cl_sd, unsigned session_no)
 	DecryptSession asymm_authclient_decipher("keys/rsa_server_privkey.pem", auth_encrypted_key, auth_encrypted_key_len, auth_iv);
 
 	// receive ciphertext
-	unsigned int auth_cipherlen = recv_data(cl_sd, &my_buff);
+	unsigned int auth_cipherlen = recv_data(cl_sd, &v_sess[session_no]->my_buff);
 
 	// decode ciphertext
 	unsigned char *auth_plaintext = new unsigned char[auth_header_msg.total_ciphertext_size];
 	unsigned int auth_plainlen = 0;
-	asymm_authclient_decipher.decrypt(my_buff.buf, auth_cipherlen);
+	asymm_authclient_decipher.decrypt(v_sess[session_no]->my_buff.buf, auth_cipherlen);
 	asymm_authclient_decipher.decrypt_end();
 	auth_plainlen = asymm_authclient_decipher.flush_plaintext(&auth_plaintext);
 
@@ -247,18 +249,18 @@ bool receive_command(int cl_sd, unsigned char **received_command, unsigned int* 
 {
 	// getting iv
 	unsigned char *command_iv = new unsigned char[EVP_CIPHER_iv_length(EVP_aes_128_cbc())];
-	unsigned int command_iv_len = recv_data(cl_sd, &my_buff);
-	memcpy(command_iv, my_buff.buf, command_iv_len);
+	unsigned int command_iv_len = recv_data(cl_sd, &v_sess[session_no]->my_buff);
+	memcpy(command_iv, v_sess[session_no]->my_buff.buf, command_iv_len);
 
 	// getting {seqnum|command_str}_Ksess
-	unsigned int command_ciphertext_len = recv_data(cl_sd, &my_buff);
+	unsigned int command_ciphertext_len = recv_data(cl_sd, &v_sess[session_no]->my_buff);
 	unsigned char *command_ciphertext = new unsigned char[command_ciphertext_len];
-	memcpy(command_ciphertext, my_buff.buf, command_ciphertext_len);
+	memcpy(command_ciphertext, v_sess[session_no]->my_buff.buf, command_ciphertext_len);
 
 	// getting HMAC_Ksess{seqnum|command_str}_Ksess
-	unsigned int command_hmac_len = recv_data(cl_sd, &my_buff);
+	unsigned int command_hmac_len = recv_data(cl_sd, &v_sess[session_no]->my_buff);
 	unsigned char *command_hmac = new unsigned char[command_hmac_len];
-	memcpy(command_hmac, my_buff.buf, command_hmac_len);
+	memcpy(command_hmac, v_sess[session_no]->my_buff.buf, command_hmac_len);
 
 	// making HMAC_Ksess{seqnum|command_str}_Ksess
 	unsigned char *computed_hmac;
@@ -465,7 +467,7 @@ int handler_fun(int cl_sd, unsigned session_no){
 	// TEST
 	send_file_response(cl_sd, "plaintext.txt",session_no);
 	close(cl_sd);
-	
+
 	delete v_sess[session_no];
 
 	return 0;
@@ -477,8 +479,6 @@ int main(int argc, char** argv)
 
 	uint16_t server_port;
 	ConnectionTCP conn;
-	my_buff.buf = NULL;
-	my_buff.size = 0;
 
 	if( argc < 2 ){
 		printf("use: ./server port");
