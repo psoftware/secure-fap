@@ -1,4 +1,5 @@
 COMMONLIB_OBJ = commonlib/net_wrapper.o commonlib/messages.o commonlib/commonlib.o commonlib/SymmetricCipher.o commonlib/EncryptSession.o commonlib/DecryptSession.o commonlib/SignatureVerifier.o commonlib/SignatureMaker.o commonlib/DynamicArray.o
+COMMON_FLAGS = -std=c++11 -g -pthread
 
 all: client server database.sqlite3
 
@@ -6,22 +7,19 @@ database.sqlite3: script.sql
 	sqlite3 database.sqlite3 < script.sql
 
 client: client.o $(COMMONLIB_OBJ)
-	g++ client.o $(COMMONLIB_OBJ) -o client -lcrypto -g
+	g++ $(COMMON_FLAGS) client.o $(COMMONLIB_OBJ) -o client -lcrypto
 
 server: server.o $(COMMONLIB_OBJ)
-	g++ server.o $(COMMONLIB_OBJ) -o server -lcrypto -g -lsqlite3
+	g++ $(COMMON_FLAGS) server.o $(COMMONLIB_OBJ) -o server -lcrypto -lsqlite3
 
 client.o: client.cpp
-	g++ -c -g -Wall client.cpp -o client.o
+	g++ $(COMMON_FLAGS) -c -Wall client.cpp -o client.o
 
 server.o: server.cpp
-	g++ -c -g -Wall server.cpp -o server.o
-
-test.o: test.cpp
-	g++ -c -g -Wall test.cpp -o test.o
+	g++ $(COMMON_FLAGS) -c -Wall server.cpp -o server.o
 
 commonlib/commonlib.o: commonlib/commonlib.cpp commonlib/commonlib.h
-	g++ -c -g commonlib/commonlib.cpp -o commonlib/commonlib.o
+	g++ $(COMMON_FLAGS) -c commonlib/commonlib.cpp -o commonlib/commonlib.o
 
 commonlib/net_wrapper.o: commonlib/net_wrapper.c commonlib/net_wrapper.h
 	gcc -c -g commonlib/net_wrapper.c -o commonlib/net_wrapper.o
