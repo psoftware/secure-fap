@@ -167,42 +167,6 @@ bool wait_for_authentication_response(int sd)
 	return true;
 }
 
-/*
-bool send_command(int sd, char command_str[], unsigned int command_len)
-{
-	unsigned char *command_iv = new unsigned char[EVP_CIPHER_iv_length(EVP_aes_128_cbc())];
-	generate_iv(command_iv);
-	send_data(sd, command_iv, EVP_CIPHER_iv_length(EVP_aes_128_cbc()));
-
-	SymmetricCipher sc(EVP_aes_128_cbc(), session_key, command_iv);
-
-	// encrypt sr_seq_num|command_str
-	sc.encrypt((unsigned char*)&sr_seq_num, sizeof(sr_seq_num));
-	sc.encrypt((unsigned char*)command_str, command_len);
-	sc.encrypt_end();
-	unsigned char *command_ciphertext;
-	unsigned int command_cipherlen = sc.flush_ciphertext(&command_ciphertext);
-
-	// send {seqnum|command_str}_Ksess
-	send_data(sd, command_ciphertext, command_cipherlen);
-
-	// make hmac from {seqnum|command_str}_Ksess
-	unsigned char *hash_result;
-	unsigned int hash_len;
-
-	HMACMaker hc(session_key, 16);
-	hc.hash(command_ciphertext, command_cipherlen);
-	hash_len = hc.hash_end(&hash_result);
-
-	// send HMAC_Ksess{ eqnum|command_str}_Ksess }
-	send_data(sd, hash_result, hash_len);
-
-	// increment server sequence number
-	sr_seq_num++;
-
-	return true;
-}*/
-
 bool send_command(int sd, void *msg_str, size_t msg_len)
 {
 	unsigned char *command_iv = new unsigned char[EVP_CIPHER_iv_length(EVP_aes_128_cbc())];
@@ -409,7 +373,7 @@ bool receive_file_response(int sd, const char filename[])
 
 	// increment server sequence number
 	cl_seq_num++;
-
+	fclose(fp);
 	return true;
 }
 
@@ -500,13 +464,13 @@ int main(int argc, char **argv)
 	// ask for credentials
 	char *auth_username = NULL;
 	char *auth_secret = NULL;
-	printf("Username: ");
+	cout << "Username: ";
 	fflush(stdout);
 	scanf("%ms", &auth_username);
 	if(!auth_username)
 		return -1;
 
-	printf("Password: ");
+	cout << "Password: ";
 	fflush(stdout);
 	disable_console_echo();
 	scanf("%ms", &auth_secret);
@@ -521,7 +485,7 @@ int main(int argc, char **argv)
 	if(!wait_for_authentication_response(sd))
 		return -1;
 
-	printf("Authentication success!\n");
+	cout << "Authentication success!" << endl;
 
 	cin.ignore();
 	while(true)
@@ -535,9 +499,9 @@ int main(int argc, char **argv)
 		}
 
 		// extract command and parameter
-		std::string cmd_str = entered_string.substr(0, entered_string.find(string(" ")));
+		string cmd_str = entered_string.substr(0, entered_string.find(string(" ")));
 		entered_string.erase(0, entered_string.find(" ") + 1);
-		std::string params_str(entered_string);
+		string params_str(entered_string);
 		//cout << "cmd_str:" << cmd_str << " params_str:" << params_str << endl;
 
 		if(cmd_str == "list")
