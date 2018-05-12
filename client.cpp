@@ -1,6 +1,8 @@
 #include "commonlib/net_wrapper.h"
+#include "commonlib/net_exception.h"
 #include "commonlib/messages.h"
 #include "commonlib/commonlib.h"
+#include "commonlib/log.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -63,7 +65,7 @@ int send_hello_msg(int sock) {
 	h.t = CLIENT_HELLO;
 	h.nonce = cl_nonce = cl_seq_num = generate_nonce();
 	convert_to_network_order(&h);
-	printf("client sends nonce: %ld\n",cl_nonce);
+	LOG_DEBUG("client sends nonce: %ld\n",cl_nonce);
 	return send_data(sock,(unsigned char*)&h, sizeof(h));
 }
 
@@ -73,7 +75,7 @@ int analyze_message(unsigned char* buf)
 	switch( ((simple_msg*)buf)->t ) {
   		case SERVER_HELLO:
   			sr_nonce = sr_seq_num = ((hello_msg*)buf)->nonce;
-  			printf("Server nonce received: %ld\n",sr_nonce);
+			LOG_DEBUG("Server nonce received: %ld\n",sr_nonce);
   			break;
 		default:
 			return -2;
@@ -98,11 +100,11 @@ bool verify_server_identity(int sd)
 	// compare nonces
 	if(!sv.verify_end(signature, signature_len))
 	{
-		printf("Signature not verified!\n");
+		LOG_ERROR("Signature not verified!\n");
 		return false;
 	}
 
-	printf("Server Authentication Success!\n");
+	LOG_INFO("Server Authentication Success!\n");
 	return true;
 }
 
@@ -138,7 +140,7 @@ bool send_client_identification(int sd, char auth_username[], char auth_secret[]
 
 	// send client auth header (server needs sizes)
 	client_auth auth_header_msg = {CLIENT_AUTHENTICATION, auth_cipherlen, (unsigned int)strlen(auth_username) + 1, (unsigned int)strlen(auth_secret) + 1};
-	printf("client header: ciphertext_len = %u, username_length = %u, password_length = %u\n",
+	LOG_DEBUG("client header: ciphertext_len = %u, username_length = %u, password_length = %u\n",
 		auth_header_msg.total_ciphertext_size, auth_header_msg.username_length, auth_header_msg.password_length);
 
 	convert_to_network_order(&auth_header_msg);
@@ -218,7 +220,7 @@ bool send_command(int sd, void *msg_str, size_t msg_len)
 	unsigned char *command_ciphertext;
 	unsigned int command_cipherlen = sc.flush_ciphertext(&command_ciphertext);
 
-	printf("command_cipherlen:%d\n",command_cipherlen);
+	LOG_DEBUG("command_cipherlen:%d\n",command_cipherlen);
 	// send {seqnum|command_str}_Ksess
 	send_data(sd, command_ciphertext, command_cipherlen);
 
@@ -264,11 +266,11 @@ bool receive_str_response(int sd, unsigned char **received_data, unsigned int* r
 
 	if(CRYPTO_memcmp(computed_hmac, command_hmac, HMAC_LENGTH) != 0)
 	{
-		printf("receive_str_response: HMAC authentication failed!\n");
+		LOG_INFO("receive_str_response: HMAC authentication failed!\n");
 		return false;
 	}
 
-	printf("receive_str_response: HMAC authentication success!\n");
+	LOG_INFO("receive_str_response: HMAC authentication success!\n");
 
 	// decrypt {seqnum|command_str}_Ksess
 	SymmetricCipher sc(EVP_aes_128_cbc(), session_key, command_iv);
@@ -287,7 +289,7 @@ bool receive_str_response(int sd, unsigned char **received_data, unsigned int* r
 
 	if(received_seqno != cl_seq_num)
 	{
-		printf("receive_str_response: Invalid sequence number! (%lu != %lu)\n", received_seqno, cl_seq_num);
+		LOG_INFO("receive_str_response: Invalid sequence number! (%lu != %lu)\n", received_seqno, cl_seq_num);
 		return false;
 	}
 
@@ -298,7 +300,7 @@ bool receive_str_response(int sd, unsigned char **received_data, unsigned int* r
 	*received_data = new unsigned char[data_text_len];
 	memcpy(*received_data, data_text, data_text_len);
 	*received_data_len = data_text_len;
-	printf("receive_str_response: size = %u\n", data_text_len);
+	LOG_DEBUG("receive_str_response: size = %u\n", data_text_len);
 
 	return true;
 }
@@ -316,7 +318,7 @@ bool receive_file_response(int sd, const char filename[])
 	// get file transfer header
 	send_file_msg s_msg;
 	if(!recv_msg(sd, &s_msg, SEND_FILE)) {
-		printf("Errore ricezione messaggio SEND_FILE \n");
+		LOG_ERROR("Errore ricezione messaggio SEND_FILE \n");
 		return -1;
 	}
 
@@ -332,7 +334,7 @@ bool receive_file_response(int sd, const char filename[])
 	{
 		// get chunk from tcp socket
 		unsigned int chunk_cipherlen = recv_data(sd, &chunk_cipher);
-		printf("decrypting chunk(%d) of %d ciphertext bytes\n", i, chunk_cipherlen);
+		LOG_DEBUG("decrypting chunk(%d) of %d ciphertext bytes\n", i, chunk_cipherlen);
 
 		// hash partial encrypted text
 		hm.hash(chunk_cipher.buf, chunk_cipherlen);
@@ -353,7 +355,7 @@ bool receive_file_response(int sd, const char filename[])
 
 			// verify sequence number
 			if(received_seqno != cl_seq_num) {
-				printf("receive_str_response: Invalid sequence number! (%lu != %lu)\n", received_seqno, cl_seq_num);
+				LOG_ERROR("receive_str_response: Invalid sequence number! (%lu != %lu)\n", received_seqno, cl_seq_num);
 				return false;
 			}
 
@@ -374,7 +376,7 @@ bool receive_file_response(int sd, const char filename[])
 			sc.decrypt_end();
 			unsigned padding_plainlen = sc.flush_plaintext(&padding_plaintext);
 			total_plainlen += padding_plainlen;
-			printf("adding last padded block of %d bytes\n", padding_plainlen);
+			LOG_DEBUG("adding last padded block of %d bytes\n", padding_plainlen);
 
 			// write latest block (without padding)
 			fwrite(padding_plaintext, 1, padding_plainlen, fp);
@@ -393,11 +395,11 @@ bool receive_file_response(int sd, const char filename[])
 	// verify hash
 	if(CRYPTO_memcmp(computed_hmac, received_hmac, HMAC_LENGTH) != 0)
 	{
-		printf("receive_str_response: HMAC authentication failed!\n");
+		LOG_INFO("receive_str_response: HMAC authentication failed!\n");
 		return false;
 	}
 
-	printf("receive_str_response: HMAC authentication success!\n");
+	LOG_INFO("receive_str_response: HMAC authentication success!\n");
 
 	// increment server sequence number
 	cl_seq_num++;
@@ -518,7 +520,7 @@ int main(int argc, char **argv)
 		std::string cmd_str = entered_string.substr(0, entered_string.find(string(" ")));
 		entered_string.erase(0, entered_string.find(" ") + 1);
 		std::string params_str(entered_string);
-		cout << "cmd_str:" << cmd_str << " params_str:" << params_str << endl;
+		//cout << "cmd_str:" << cmd_str << " params_str:" << params_str << endl;
 
 		if(cmd_str == "list")
 			list_command(sd, params_str);

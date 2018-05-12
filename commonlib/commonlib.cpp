@@ -127,7 +127,7 @@ bool recv_msg(int sd, void *s_msg, message_type expected)
 	int bytes_rec = recv_data(sd, &my_buff);
 	memcpy(s_msg,my_buff.buf,bytes_rec);
 	int t = convert_to_host_order(s_msg);
-	printf("expected:%d received:%d \n",expected,t);
+	// printf("expected:%d received:%d \n",expected,t);
 	if( t == expected )
 		return true;
 	else 
@@ -149,7 +149,7 @@ std::string show_dir_content(const char * path)
 	d = opendir(path);
 	if (d) {
 		while ((dir = readdir(d)) != NULL) {
-			printf("%s\n", dir->d_name);
+			//printf("%s\n", dir->d_name);
 			s += std::string(dir->d_name)+"\n";
 		}
 		closedir(d);

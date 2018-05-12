@@ -29,7 +29,7 @@ int open_tcp_server(uint16_t port)
 
 	inet_ntop(AF_INET, &my_addr.sin_addr, ip_str, 16);
 
-	printf("Server aperto. ip:%s porta:%d\n",ip_str,port);
+	//printf("Server aperto. ip:%s porta:%d\n",ip_str,port);
 	ret = listen(sock, 10);
 	
 	if( ret == -1)

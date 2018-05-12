@@ -2,6 +2,7 @@
 #include "commonlib/net_exception.h"
 #include "commonlib/messages.h"
 #include "commonlib/commonlib.h"
+#include "commonlib/log.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -36,14 +37,14 @@ bool sqlite_check_password(sqlite3 *db, char *username, char *hashed_password)
 	sql_mutex.lock();
 	int rc = sqlite3_prepare_v2(db, prepared_sql, -1, &stmt, NULL);
 	if (rc != SQLITE_OK) {
-		printf("sqlite_check_password: prepare error!\n");
+		LOG_ERROR("sqlite_check_password: prepare error!\n");
 		return false;
 	}
 
 	if( sqlite3_bind_text(stmt, 1, username, strlen(username), SQLITE_STATIC) ||
 		sqlite3_bind_text(stmt, 2, hashed_password, strlen(hashed_password), SQLITE_STATIC))
 	{
-		printf("sqlite_check_password: prepare error!\n");
+		LOG_ERROR("sqlite_check_password: prepare error!\n");
 		return false;
 	}
 
@@ -61,7 +62,7 @@ bool sqlite_check_password(sqlite3 *db, char *username, char *hashed_password)
 bool open_database(sqlite3 **db, const char *database_path) {
 	int rc = sqlite3_open(database_path, db);
 	if(rc) {
-		printf("Can't open database: %s\n", sqlite3_errmsg(*db));
+		LOG_ERROR("Can't open database: %s\n", sqlite3_errmsg(*db));
 		sqlite3_close(*db);
 		return false;
 	}
@@ -100,7 +101,7 @@ void send_hello_msg(int sock, unsigned session_no) {
 	h.t = SERVER_HELLO;
 	h.nonce = v_sess[session_no]->sr_nonce = v_sess[session_no]->sr_seq_num = generate_nonce();
 	convert_to_network_order(&h);
-	printf("server sends nonce: %ld\n",v_sess[session_no]->sr_nonce);
+	LOG_DEBUG("server sends nonce: %ld\n",v_sess[session_no]->sr_nonce);
 
 	if( !(send_data(sock,(unsigned char*)&h, sizeof(h)) == sizeof(h)) )
 		throw net_exception("send_hello_msg: cannot send SERVER_HELLO");
@@ -129,7 +130,7 @@ void send_server_verification(int cl_sd, unsigned session_no)
 	// send client_nonce|server_noncce
 	if(send_data(cl_sd, signature, signature_len) != (int)signature_len)
 		throw net_exception("send_server_verification: cannot send signature");
-	printf("sent: signature_len  = %u\n", signature_len);
+	LOG_DEBUG("sent: signature_len  = %u\n", signature_len);
 }
 
 bool check_client_identity(int cl_sd, unsigned session_no)
@@ -139,7 +140,7 @@ bool check_client_identity(int cl_sd, unsigned session_no)
 	unsigned int auth_encrypted_key_len = recv_data(cl_sd, &v_sess[session_no]->my_buff);
 	if(auth_encrypted_key_len > 10000)
 	{
-		printf("error: auth_encrypted_key_len = %u invalid size!\n", auth_encrypted_key_len);
+		LOG_ERROR("error: auth_encrypted_key_len = %u invalid size!\n", auth_encrypted_key_len);
 		throw net_exception("check_client_identity: cannot receive signature");
 	}
 	unsigned char *auth_encrypted_key = new unsigned char[auth_encrypted_key_len];
@@ -149,7 +150,7 @@ bool check_client_identity(int cl_sd, unsigned session_no)
 	unsigned char *auth_iv = new unsigned char[EVP_CIPHER_iv_length(EVP_aes_128_cbc())];
 	unsigned int auth_iv_len = recv_data(cl_sd, &v_sess[session_no]->my_buff);
 	if((int)auth_iv_len != EVP_CIPHER_iv_length(EVP_aes_128_cbc())) {
-		printf("error: auth_iv_len = %u instead of %d!\n", auth_iv_len, EVP_CIPHER_iv_length(EVP_aes_128_cbc()));
+		LOG_ERROR("error: auth_iv_len = %u instead of %d!\n", auth_iv_len, EVP_CIPHER_iv_length(EVP_aes_128_cbc()));
 		throw net_exception("check_client_identity: cannot receive iv");
 	}
 	memcpy(auth_iv, v_sess[session_no]->my_buff.buf, auth_iv_len);
@@ -162,7 +163,7 @@ bool check_client_identity(int cl_sd, unsigned session_no)
 	memcpy(&auth_header_msg, v_sess[session_no]->my_buff.buf, sizeof(auth_header_msg));
 	convert_to_host_order(&auth_header_msg);
 
-	printf("client header: ciphertext_len = %u, username_length = %u, password_length = %u\n",
+	LOG_DEBUG("client header: ciphertext_len = %u, username_length = %u, password_length = %u\n",
 		auth_header_msg.total_ciphertext_size, auth_header_msg.username_length, auth_header_msg.password_length);
 
 	DecryptSession asymm_authclient_decipher("keys/rsa_server_privkey.pem", auth_encrypted_key, auth_encrypted_key_len, auth_iv);
@@ -185,7 +186,7 @@ bool check_client_identity(int cl_sd, unsigned session_no)
 	uint64_t received_server_nonce;
 	memcpy(&received_server_nonce, auth_plaintext, 8);
 	pl_offset += 8;
-	printf("received_server_nonce = %ld\n", received_server_nonce);
+	LOG_DEBUG("received_server_nonce = %ld\n", received_server_nonce);
 
 	memcpy(v_sess[session_no]->session_key, auth_plaintext + pl_offset, 16);
 	pl_offset += 16;
@@ -198,16 +199,16 @@ bool check_client_identity(int cl_sd, unsigned session_no)
 	memcpy(received_password, auth_plaintext + pl_offset, auth_header_msg.password_length);
 	pl_offset += auth_header_msg.username_length;
 
-	printf("got key:\n");
-	print_hex(v_sess[session_no]->session_key, 16);
-	printf("got: username = %s, password = %s\n", received_username, received_password);
+	LOG_DEBUG("got key:\n");
+	//print_hex(v_sess[session_no]->session_key, 16);
+	LOG_DEBUG("got: username = %s, password = %s\n", received_username, received_password);
 
 	// 5) send auth result
 	simple_msg auth_resp_msg;
 
 	if(received_server_nonce != v_sess[session_no]->sr_nonce)
 	{
-		printf("error: nonces unmatch!\n");
+		LOG_ERROR("error: nonces unmatch!\n");
 		auth_resp_msg.t = AUTHENTICATION_FAILED;
 		send_data(cl_sd, (unsigned char*)&auth_resp_msg, sizeof(auth_resp_msg));
 		return false;
@@ -224,13 +225,13 @@ bool check_client_identity(int cl_sd, unsigned session_no)
 
 	if(!sqlite_check_password(database, (char*)received_username, hash_hex_result))
 	{
-		printf("error: login failed!\n");
+		LOG_ERROR("error: login failed!\n");
 		auth_resp_msg.t = AUTHENTICATION_FAILED;
 		send_data(cl_sd, (unsigned char*)&auth_resp_msg, sizeof(auth_resp_msg));
 		return false;
 	}
 
-	printf("Client authentication success!\n");
+	LOG_INFO("Client authentication success!\n");
 
 	auth_resp_msg.t = AUTHENTICATION_OK;
 	send_data(cl_sd, (unsigned char*)&auth_resp_msg, sizeof(auth_resp_msg));
@@ -269,11 +270,11 @@ bool receive_command(int cl_sd, unsigned char **received_command, unsigned int* 
 
 	if(CRYPTO_memcmp(computed_hmac, command_hmac, HMAC_LENGTH) != 0)
 	{
-		printf("HMAC authentication failed!\n");
+		LOG_INFO("HMAC authentication failed!\n");
 		return false;
 	}
 
-	printf("HMAC authentication success!\n");
+	LOG_INFO("HMAC authentication success!\n");
 
 	// decrypt {seqnum|command_str}_Ksess
 	SymmetricCipher sc(EVP_aes_128_cbc(), v_sess[session_no]->session_key, command_iv);
@@ -292,7 +293,7 @@ bool receive_command(int cl_sd, unsigned char **received_command, unsigned int* 
 
 	if(received_seqno != v_sess[session_no]->sr_seq_num)
 	{
-		printf("Invalid sequence number! (%lu != %lu)\n", received_seqno, v_sess[session_no]->sr_seq_num);
+		LOG_ERROR("Invalid sequence number! (%lu != %lu)\n", received_seqno, v_sess[session_no]->sr_seq_num);
 		return false;
 	}
 
@@ -305,7 +306,7 @@ bool receive_command(int cl_sd, unsigned char **received_command, unsigned int* 
 	*received_command_len = command_text_len;
 
 	//printf("Received command: %s\n", command_text);
-	printf("Received command. command_text_len:%d\n", command_text_len);
+	LOG_DEBUG("Received command. command_text_len:%d\n", command_text_len);
 	return true;
 }
 
@@ -356,7 +357,7 @@ bool send_file_response(int cl_sd, const char filename[], unsigned session_no)
 	unsigned int filesize = open_file_r(filename, &fp);
 	// sizeof(uint64_t) is added for client_nonce
 	unsigned int chunk_count = divide_upper(filesize + sizeof(uint64_t), CHUNK_SIZE);
-	printf("File size = %u, Chunk size = %d, Chunk count = %d\n", filesize, CHUNK_SIZE, chunk_count);
+	LOG_DEBUG("File size = %u, Chunk size = %d, Chunk count = %d\n", filesize, CHUNK_SIZE, chunk_count);
 
 	// generate and send iv
 	unsigned char *data_resp_iv = new unsigned char[EVP_CIPHER_iv_length(EVP_aes_128_cbc())];
@@ -380,7 +381,7 @@ bool send_file_response(int cl_sd, const char filename[], unsigned session_no)
 	{
 		// read next chunk from file
 		unsigned int chunk_plainlen = fread(datachunk, 1, CHUNK_SIZE, fp);
-		printf("encrypting chunk of %d plaintext bytes\n", chunk_plainlen);
+		LOG_DEBUG("encrypting chunk of %d plaintext bytes\n", chunk_plainlen);
 
 		// do encryption
 		unsigned char *chunk_ciphertext;
@@ -391,7 +392,7 @@ bool send_file_response(int cl_sd, const char filename[], unsigned session_no)
 		hc.hash(chunk_ciphertext, chunk_cipherlen);
 
 		// send encrypted data
-		printf("sending chunk(%d) of %d bytes\n", i, chunk_cipherlen);
+		LOG_DEBUG("sending chunk(%d) of %d bytes\n", i, chunk_cipherlen);
 		send_data(cl_sd, chunk_ciphertext, chunk_cipherlen);
 		delete[] chunk_ciphertext;
 
@@ -404,7 +405,7 @@ bool send_file_response(int cl_sd, const char filename[], unsigned session_no)
 			unsigned int padding_cipherlen = sc.flush_ciphertext(&padding_ciphertext);
 
 			// send padding
-			printf("sending padding of %d bytes\n", padding_cipherlen);
+			LOG_DEBUG("sending padding of %d bytes\n", padding_cipherlen);
 
 			// hash partial ciphertext
 			hc.hash(padding_ciphertext, padding_cipherlen);
@@ -431,7 +432,7 @@ bool send_file_response(int cl_sd, const char filename[], unsigned session_no)
 void list_command_response(int cl_sd, unsigned session_no)
 {
 	char *data_response;
-	printf("client %d LIST_FILE\n",session_no);
+	LOG_DEBUG("client %d LIST_FILE\n",session_no);
 	std::string s = show_dir_content("./files/"); // aggiustare
 	data_response = new char[s.length()+1];
 	memcpy(data_response,s.c_str(),s.length()+1);
@@ -451,6 +452,8 @@ int handler_fun(int cl_sd, unsigned session_no){
 	v_sess.push_back(new Session());
 
 	try {
+		printf("[%u] Connected new client\n", session_no);
+
 		// 1) Get Client Nonce
 		recv_hello_msg(cl_sd, session_no);
 
@@ -465,22 +468,27 @@ int handler_fun(int cl_sd, unsigned session_no){
 		// receive {client_nonce|session key|username|password}_Kpub
 		// send authok or authfailed
 		if ( !check_client_identity(cl_sd, session_no) )
-			return -1;
+		{
+			printf("[%u] Client not authenticated!\n", session_no);
+			throw runtime_error("client authentication exception");
+		}
+
+		printf("[%u] Client authenticated\n", session_no);
 
 		while(true)
 		{
-			// 6) Receive Command
+			// 6) Receive Command / 7) Send Response
 			// receive {seqnum|command_str}_Ksess | HMAC{{seqnum|command_str}_Ksess}_Ksess
+			// send {seqnum|data_response}_Ksess | HMAC{{seqnum|data_response}_Ksess}_Ksess
 			unsigned char *received_command = NULL;
 			unsigned int received_command_len;
 			if(!receive_command(cl_sd, &received_command, &received_command_len, session_no)){
-				printf("error received_command\n");
-				return -1;
+				LOG_ERROR("[%u] Security error generated while receiving command\n", session_no);
+				throw runtime_error("client authentication exception");
 			}
-			// 7) Send Response
-			// send {seqnum|data_response}_Ksess | HMAC{{seqnum|data_response}_Ksess}_Ksess
+
 			if( convert_to_host_order(received_command) == -1 ){
-				printf("Invalid msg received from client. session_no:%u\n",session_no);
+				LOG_ERROR("[%u] convert_to_host_order failed\n",session_no);
 			}
 
 			if(((simple_msg*)received_command)->t == LIST_FILE)
@@ -489,9 +497,12 @@ int handler_fun(int cl_sd, unsigned session_no){
 				download_command_response(cl_sd, session_no, (download_file*)received_command);
 		}
 	} catch (net_exception& e) {
-		printf("client net_exception: %s\n", e.getMessage().c_str());
+		LOG_ERROR("[%u] Catched net_exception: %s\n", session_no, e.getMessage().c_str());
+	} catch (...) {
+		LOG_ERROR("[%u] Catched general exception\n", session_no);
 	}
 
+	LOG_ERROR("[%u] Closing connection.\n", session_no);
 	close(cl_sd);
 	delete v_sess[session_no];
 
@@ -518,14 +529,16 @@ int main(int argc, char** argv)
 	atexit(close_all);
 
 	if( !open_database(&database, "database.sqlite3") ) {
-		printf("error: failed to open database\n");
+		LOG_ERROR("error: failed to open database\n");
 		return -1;
 	}
 
 	sd = open_tcp_server(server_port);
 	if( sd == -1 ){
-		return -1;
+		LOG_ERROR("Failed to start server!");
 	}
+
+	printf("Server started on 127.0.0.1:%u\n", server_port);
 
 	while( 1 ) {
 		int cl_sd = accept_tcp_server(sd,&conn);
