@@ -1,0 +1,11 @@
+Trasformata di Fourier
+Da Wikipedia, l'enciclopedia libera.
+In analisi matematica, la trasformata di Fourier, abbreviata spesso in F-trasformata, è una trasformata integrale con numerose applicazioni nella fisica e nell'ingegneria. Fu sviluppata dal matematico francese Jean Baptiste Joseph Fourier nel 1822, nel suo trattato Théorie analytique de la chaleur.
+
+La trasformata di Fourier è uno degli strumenti matematici maggiormente utilizzati nell'ambito delle scienze pure e applicate. Essa permette di scrivere una funzione dipendente dal tempo nel dominio delle frequenze, e per fare ciò decompone la funzione nella base delle funzioni esponenziali con un prodotto scalare. Questa rappresentazione viene chiamata spesso spettro della funzione (tale nome non è legato al concetto di spettro di un operatore).
+
+La trasformata di Fourier è invertibile: a partire dalla trasformata di una funzione {\displaystyle {\hat {x}}} {\hat  x} è possibile risalire alla funzione {\displaystyle x} x tramite il teorema di inversione di Fourier.
+
+Nel caso di funzioni periodiche, la trasformata di Fourier può essere semplificata con il calcolo di un insieme discreto di ampiezze complesse, chiamati coefficienti della serie di Fourier.
+
+Grazie alla trasformata di Fourier è possibile individuare un criterio per compiere un
