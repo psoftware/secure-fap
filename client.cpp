@@ -514,7 +514,7 @@ int main(int argc, char **argv)
 
 		string entered_string;
 		if(!(std::getline(std::cin, entered_string)))
-			return -1;
+			break;
 
 		// extract command and parameter
 		std::string cmd_str = entered_string.substr(0, entered_string.find(string(" ")));
@@ -526,9 +526,15 @@ int main(int argc, char **argv)
 			list_command(sd, params_str);
 		else if(cmd_str == "download")
 			download_command(sd, params_str);
+		else if(cmd_str == "exit" || cmd_str == "quit")
+			break;
+		else if(cmd_str == "help")
+			cout << "Commands:" << endl << "\tlist, download <fileid>" << endl << "\thelp, exit, quit" << endl;
 		else
 			cout << "unrecognized command" << endl;
 	}
+
+	printf("\n");
 
 	close(sd);
 
