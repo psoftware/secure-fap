@@ -514,7 +514,8 @@ int handler_fun(int cl_sd, unsigned session_no){
 	return 0;
 }
 
-void close_all(void){
+void close_all(int){
+	printf(RESET);
 	close(sd);
 }
 
@@ -531,7 +532,8 @@ int main(int argc, char** argv)
 	}
 	sscanf(argv[1],"%hd",&server_port);	
 	
-	atexit(close_all);
+	atexit([]{close_all(0);});
+	//signal(SIGINT, close_all);
 
 	if( !open_database(&database, "database.sqlite3") ) {
 		LOG_ERROR("error: failed to open database\n");
