@@ -352,9 +352,16 @@ unsigned int divide_upper(unsigned int dividend, unsigned int divisor)
 
 bool send_file_response(int cl_sd, const char filename[], unsigned session_no)
 {
+	uint8_t response_code = 0;
+
 	// getting file size
 	FILE *fp;
 	unsigned int filesize = open_file_r(filename, &fp);
+	if(filesize == 0)
+		response_code = 0; // file is non existent
+	else
+		response_code = 1;
+
 	// sizeof(uint64_t) is added for client_nonce
 	unsigned int chunk_count = divide_upper(filesize + sizeof(uint64_t), CHUNK_SIZE);
 	LOG_DEBUG("File size = %u, Chunk size = %d, Chunk count = %d\n", filesize, CHUNK_SIZE, chunk_count);
@@ -365,9 +372,13 @@ bool send_file_response(int cl_sd, const char filename[], unsigned session_no)
 	send_data(cl_sd, data_resp_iv, EVP_CIPHER_iv_length(EVP_aes_128_cbc()));
 
 	// send chunk transfer details
-	send_file_msg s_msg = {SEND_FILE, CHUNK_SIZE, chunk_count + 1};  // +1 for padding
+	send_file_msg s_msg = {SEND_FILE, response_code, CHUNK_SIZE, chunk_count + 1};  // +1 for padding
 	convert_to_network_order(&s_msg);
 	send_data(cl_sd, (unsigned char*)&s_msg, sizeof(s_msg));
+
+	// if file does not exists, then don't go on
+	if(response_code == 0)
+		return false;
 
 	// we need to compute {seqnum|data_response}_Ksess and hash it
 	SymmetricCipher sc(EVP_aes_128_cbc(), v_sess[session_no]->session_key, data_resp_iv);
@@ -443,8 +454,17 @@ void list_command_response(int cl_sd, unsigned session_no)
 
 void download_command_response(int cl_sd, unsigned session_no, download_file* dwn_header)
 {
-	if(!send_file_response(cl_sd, "files/file.txt", session_no))
-		throw std::runtime_error("cannot send file data");
+	if(dwn_header->filename_len > 255)
+		throw std::runtime_error("Filename length is invalid");
+
+	char fname[5 + 255] = "files/";
+	strncat(fname, dwn_header->filename, dwn_header->filename_len);
+
+	printf("[%u] Client requested file %s\n", session_no, fname);
+	if(!send_file_response(cl_sd, fname, session_no))
+		printf("[%u] Client requested non-existent file %s\n", session_no, fname);
+	else
+		printf("[%u] File %s download completed\n", session_no, fname);
 }
 
 

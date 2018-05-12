@@ -46,6 +46,7 @@ typedef struct client_auth_t
 typedef struct send_file_msg_t
 {
 	message_type t;
+	uint8_t response_code;
 	uint32_t chunk_size;
 	uint32_t chunk_number;
 }__attribute__((packed)) send_file_msg;
@@ -53,7 +54,8 @@ typedef struct send_file_msg_t
 typedef struct download_file_t
 {
 	message_type t;
-	uint32_t file_id;
+	char filename[255];	//for most of file systems this is the max filename length
+	uint8_t filename_len;
 }__attribute__((packed)) download_file;
 
 #ifdef __cplusplus

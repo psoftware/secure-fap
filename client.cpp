@@ -307,9 +307,6 @@ bool receive_str_response(int sd, unsigned char **received_data, unsigned int* r
 
 bool receive_file_response(int sd, const char filename[])
 {
-	FILE *fp;
-	open_file_w(filename, &fp);
-
 	// getting iv
 	unsigned char *iv = new unsigned char[EVP_CIPHER_iv_length(EVP_aes_128_cbc())];
 	unsigned int iv_len = recv_data(sd, &my_buff);
@@ -321,6 +318,15 @@ bool receive_file_response(int sd, const char filename[])
 		LOG_ERROR("Errore ricezione messaggio SEND_FILE \n");
 		return -1;
 	}
+
+	// if file does not exist
+	if(s_msg.response_code == 0) {
+		printf("File does not exist!\n");
+		return false; // we can't go on
+	}
+
+	FILE *fp;
+	open_file_w(filename, &fp);
 
 	SymmetricCipher sc(EVP_aes_128_cbc(), session_key, iv);
 	HMACMaker hm(session_key, 16);
@@ -437,17 +443,18 @@ void list_command(int sd, string parameters)
 
 void download_command(int sd, string parameters)
 {
-	unsigned int file_index = 0;
-	try {
-		file_index = std::stoi(parameters);
-	} catch(...) {
-		cout << "invalid argument" << endl;
+	if(parameters.length() > 255)
+	{
+		printf("Error: Too long filename size\n");
 		return;
 	}
 
 	// 6) Send Command
 	// send {seqnum|command_str}_Ksess | HMAC{{seqnum|command_str}_Ksess}_Ksess
-	download_file cmd = {DOWNLOAD_FILE, file_index};
+	download_file cmd;
+	cmd.t = DOWNLOAD_FILE;
+	cmd.filename_len = parameters.length();
+	memcpy(cmd.filename, parameters.c_str(), cmd.filename_len);
 	if(!send_command(sd, &cmd, sizeof(cmd)))
 		throw runtime_error("cannot send command");
 
@@ -542,7 +549,7 @@ int main(int argc, char **argv)
 			break;
 		}
 		else if(cmd_str == "help")
-			cout << "Commands:" << endl << "\tlist, download <fileid>" << endl << "\thelp, exit, quit" << endl;
+			cout << "Commands:" << endl << "\tlist, download <filename>" << endl << "\thelp, exit, quit" << endl;
 		else if(cmd_str != "")
 			cout << "unrecognized command" << endl;
 	}
