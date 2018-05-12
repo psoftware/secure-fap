@@ -510,7 +510,7 @@ int main(int argc, char **argv)
 	cin.ignore();
 	while(true)
 	{
-		cout << "server$ " << flush;
+		cout << auth_username << "@" << argv[1] << "$ " << flush;
 
 		string entered_string;
 		if(!(std::getline(std::cin, entered_string)))
@@ -530,7 +530,7 @@ int main(int argc, char **argv)
 			break;
 		else if(cmd_str == "help")
 			cout << "Commands:" << endl << "\tlist, download <fileid>" << endl << "\thelp, exit, quit" << endl;
-		else
+		else if(cmd_str != "")
 			cout << "unrecognized command" << endl;
 	}
 
