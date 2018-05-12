@@ -1,4 +1,4 @@
-COMMONLIB_OBJ = commonlib/net_wrapper.o commonlib/messages.o commonlib/commonlib.o commonlib/SymmetricCipher.o commonlib/EncryptSession.o commonlib/DecryptSession.o commonlib/SignatureVerifier.o commonlib/SignatureMaker.o commonlib/DynamicArray.o
+COMMONLIB_OBJ = commonlib/net_wrapper.o commonlib/messages.o commonlib/commonlib.o commonlib/SymmetricCipher.o commonlib/EncryptSession.o commonlib/DecryptSession.o commonlib/SignatureVerifier.o commonlib/SignatureMaker.o commonlib/DynamicArray.o commonlib/net_exception.o
 COMMON_FLAGS = -std=c++14 -g -pthread
 
 all: client server database.sqlite3
@@ -44,6 +44,9 @@ commonlib/SignatureMaker.o: commonlib/SignatureMaker.cpp commonlib/SignatureMake
 
 commonlib/DynamicArray.o: commonlib/DynamicArray.cpp commonlib/DynamicArray.h
 	g++ -c -g commonlib/DynamicArray.cpp -o commonlib/DynamicArray.o
+
+commonlib/net_error.o: commonlib/net_exception.cpp commonlib/net_exception.h
+	g++ $(COMMON_FLAGS) -c -g commonlib/net_exception.cpp -o commonlib/net_exception.o
 
 clean:
 	rm -f client server *.o commonlib/*.o database.sqlite3

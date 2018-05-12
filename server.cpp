@@ -1,4 +1,5 @@
 #include "commonlib/net_wrapper.h"
+#include "commonlib/net_exception.h"
 #include "commonlib/messages.h"
 #include "commonlib/commonlib.h"
 
@@ -94,32 +95,26 @@ struct Session {
 
 std::vector<Session*> v_sess;
 
-bool send_hello_msg(int sock, unsigned session_no) {
+void send_hello_msg(int sock, unsigned session_no) {
 	hello_msg h;
 	h.t = SERVER_HELLO;
 	h.nonce = v_sess[session_no]->sr_nonce = v_sess[session_no]->sr_seq_num = generate_nonce();
 	convert_to_network_order(&h);
 	printf("server sends nonce: %ld\n",v_sess[session_no]->sr_nonce);
-	if( send_data(sock,(unsigned char*)&h, sizeof(h)) == sizeof(h) )
-		return true;
-	else
-		return false;
 
+	if( !(send_data(sock,(unsigned char*)&h, sizeof(h)) == sizeof(h)) )
+		throw net_exception("send_hello_msg: cannot send SERVER_HELLO");
 }
 
-bool recv_hello_msg(int sd, unsigned session_no){
+void recv_hello_msg(int sd, unsigned session_no){
 	hello_msg h_msg;
 	if(	!recv_msg(sd, &h_msg ,CLIENT_HELLO) )
-	{
-		printf("Error receive CLIENT_HELLO\n");
-		return false;
-	} else  {
+		throw net_exception("recv_hello_msg: cannot receive CLIENT_HELLO");
+	else
 		v_sess[session_no]->cl_nonce = v_sess[session_no]->cl_seq_num = h_msg.nonce;
-		return true;
-	}
 }
 
-bool send_server_verification(int cl_sd, unsigned session_no)
+void send_server_verification(int cl_sd, unsigned session_no)
 {
 	SignatureMaker sm("keys/rsa_server_privkey.pem");
 
@@ -132,10 +127,9 @@ bool send_server_verification(int cl_sd, unsigned session_no)
 	unsigned int signature_len = sm.sign_end(&signature);
 
 	// send client_nonce|server_noncce
-	send_data(cl_sd, signature, signature_len);
+	if(send_data(cl_sd, signature, signature_len) != (int)signature_len)
+		throw net_exception("send_server_verification: cannot send signature");
 	printf("sent: signature_len  = %u\n", signature_len);
-
-	return true;
 }
 
 bool check_client_identity(int cl_sd, unsigned session_no)
@@ -146,7 +140,7 @@ bool check_client_identity(int cl_sd, unsigned session_no)
 	if(auth_encrypted_key_len > 10000)
 	{
 		printf("error: auth_encrypted_key_len = %u invalid size!\n", auth_encrypted_key_len);
-		return false;
+		throw net_exception("check_client_identity: cannot receive signature");
 	}
 	unsigned char *auth_encrypted_key = new unsigned char[auth_encrypted_key_len];
 	memcpy(auth_encrypted_key, v_sess[session_no]->my_buff.buf, auth_encrypted_key_len);
@@ -156,14 +150,15 @@ bool check_client_identity(int cl_sd, unsigned session_no)
 	unsigned int auth_iv_len = recv_data(cl_sd, &v_sess[session_no]->my_buff);
 	if((int)auth_iv_len != EVP_CIPHER_iv_length(EVP_aes_128_cbc())) {
 		printf("error: auth_iv_len = %u instead of %d!\n", auth_iv_len, EVP_CIPHER_iv_length(EVP_aes_128_cbc()));
-		return false;
+		throw net_exception("check_client_identity: cannot receive iv");
 	}
 	memcpy(auth_iv, v_sess[session_no]->my_buff.buf, auth_iv_len);
 
 
 	// getting client authentication header
 	client_auth auth_header_msg;
-	recv_data(cl_sd, &v_sess[session_no]->my_buff);
+	if(recv_data(cl_sd, &v_sess[session_no]->my_buff) == -1)
+		throw net_exception("check_client_identity: cannot receive auth_header_msg");
 	memcpy(&auth_header_msg, v_sess[session_no]->my_buff.buf, sizeof(auth_header_msg));
 	convert_to_host_order(&auth_header_msg);
 
@@ -173,7 +168,9 @@ bool check_client_identity(int cl_sd, unsigned session_no)
 	DecryptSession asymm_authclient_decipher("keys/rsa_server_privkey.pem", auth_encrypted_key, auth_encrypted_key_len, auth_iv);
 
 	// receive ciphertext
-	unsigned int auth_cipherlen = recv_data(cl_sd, &v_sess[session_no]->my_buff);
+	int auth_cipherlen = recv_data(cl_sd, &v_sess[session_no]->my_buff);
+	if(auth_cipherlen == -1)
+		throw net_exception("check_client_identity: cannot receive auth_header_msg");
 
 	// decode ciphertext
 	unsigned char *auth_plaintext = new unsigned char[auth_header_msg.total_ciphertext_size];
@@ -245,16 +242,22 @@ bool receive_command(int cl_sd, unsigned char **received_command, unsigned int* 
 {
 	// getting iv
 	unsigned char *command_iv = new unsigned char[EVP_CIPHER_iv_length(EVP_aes_128_cbc())];
-	unsigned int command_iv_len = recv_data(cl_sd, &v_sess[session_no]->my_buff);
+	int command_iv_len = recv_data(cl_sd, &v_sess[session_no]->my_buff);
+	if(command_iv_len == -1)
+		throw net_exception("receive_command: cannot receive command_iv");
 	memcpy(command_iv, v_sess[session_no]->my_buff.buf, command_iv_len);
 
 	// getting {seqnum|command_str}_Ksess
-	unsigned int command_ciphertext_len = recv_data(cl_sd, &v_sess[session_no]->my_buff);
+	int command_ciphertext_len = recv_data(cl_sd, &v_sess[session_no]->my_buff);
+	if(command_ciphertext_len == -1)
+		throw net_exception("receive_command: cannot receive command_ciphertext");
 	unsigned char *command_ciphertext = new unsigned char[command_ciphertext_len];
 	memcpy(command_ciphertext, v_sess[session_no]->my_buff.buf, command_ciphertext_len);
 
 	// getting HMAC_Ksess{seqnum|command_str}_Ksess
-	unsigned int command_hmac_len = recv_data(cl_sd, &v_sess[session_no]->my_buff);
+	int command_hmac_len = recv_data(cl_sd, &v_sess[session_no]->my_buff);
+	if(command_hmac_len == -1)
+		throw net_exception("receive_command: cannot receive command_hmac_len");
 	unsigned char *command_hmac = new unsigned char[command_hmac_len];
 	memcpy(command_hmac, v_sess[session_no]->my_buff.buf, command_hmac_len);
 
@@ -447,49 +450,49 @@ void download_command_response(int cl_sd, unsigned session_no, download_file* dw
 int handler_fun(int cl_sd, unsigned session_no){
 	v_sess.push_back(new Session());
 
-	// 1) Get Client Nonce
-	if( !recv_hello_msg(cl_sd, session_no) )
-		return -1;
+	try {
+		// 1) Get Client Nonce
+		recv_hello_msg(cl_sd, session_no);
 
-	// 2) Send Server Nonce
-	if ( !send_hello_msg(cl_sd, session_no) )
-		return -1;
+		// 2) Send Server Nonce
+		send_hello_msg(cl_sd, session_no);
 
-	// 3) Send Server verification infos
-	// sign {client_nonce|server_nonce}_Kpub
-	if ( !send_server_verification(cl_sd, session_no) )
-		return -1;
+		// 3) Send Server verification infos
+		// sign {client_nonce|server_nonce}_Kpub
+		send_server_verification(cl_sd, session_no);
 
-	// 4/5) Check Client identity / Send auth response
-	// receive {client_nonce|session key|username|password}_Kpub
-	// send authok or authfailed
-	if ( !check_client_identity(cl_sd, session_no) )
-		return -1;
-
-	while(true)
-	{
-		// 6) Receive Command
-		// receive {seqnum|command_str}_Ksess | HMAC{{seqnum|command_str}_Ksess}_Ksess
-		unsigned char *received_command = NULL;
-		unsigned int received_command_len;
-		if(!receive_command(cl_sd, &received_command, &received_command_len, session_no)){
-			printf("error received_command\n");
+		// 4/5) Check Client identity / Send auth response
+		// receive {client_nonce|session key|username|password}_Kpub
+		// send authok or authfailed
+		if ( !check_client_identity(cl_sd, session_no) )
 			return -1;
-		}
-		// 7) Send Response
-		// send {seqnum|data_response}_Ksess | HMAC{{seqnum|data_response}_Ksess}_Ksess
-		if( convert_to_host_order(received_command) == -1 ){
-			printf("Invalid msg received from client. session_no:%u\n",session_no);
-		}
 
-		if(((simple_msg*)received_command)->t == LIST_FILE)
-			list_command_response(cl_sd, session_no);
-		else if(((simple_msg*)received_command)->t == DOWNLOAD_FILE)
-			download_command_response(cl_sd, session_no, (download_file*)received_command);
+		while(true)
+		{
+			// 6) Receive Command
+			// receive {seqnum|command_str}_Ksess | HMAC{{seqnum|command_str}_Ksess}_Ksess
+			unsigned char *received_command = NULL;
+			unsigned int received_command_len;
+			if(!receive_command(cl_sd, &received_command, &received_command_len, session_no)){
+				printf("error received_command\n");
+				return -1;
+			}
+			// 7) Send Response
+			// send {seqnum|data_response}_Ksess | HMAC{{seqnum|data_response}_Ksess}_Ksess
+			if( convert_to_host_order(received_command) == -1 ){
+				printf("Invalid msg received from client. session_no:%u\n",session_no);
+			}
+
+			if(((simple_msg*)received_command)->t == LIST_FILE)
+				list_command_response(cl_sd, session_no);
+			else if(((simple_msg*)received_command)->t == DOWNLOAD_FILE)
+				download_command_response(cl_sd, session_no, (download_file*)received_command);
+		}
+	} catch (net_exception& e) {
+		printf("client net_exception: %s\n", e.getMessage().c_str());
 	}
 
 	close(cl_sd);
-
 	delete v_sess[session_no];
 
 	return 0;
