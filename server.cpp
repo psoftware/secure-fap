@@ -495,6 +495,11 @@ int handler_fun(int cl_sd, unsigned session_no){
 				list_command_response(cl_sd, session_no);
 			else if(((simple_msg*)received_command)->t == DOWNLOAD_FILE)
 				download_command_response(cl_sd, session_no, (download_file*)received_command);
+			else if(((simple_msg*)received_command)->t == QUIT_SESSION)
+			{
+				LOG_ERROR("[%u] Client quits\n", session_no);
+				break;
+			}
 		}
 	} catch (net_exception& e) {
 		LOG_ERROR("[%u] Catched net_exception: %s\n", session_no, e.getMessage().c_str());

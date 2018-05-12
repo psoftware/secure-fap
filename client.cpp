@@ -407,13 +407,22 @@ bool receive_file_response(int sd, const char filename[])
 	return true;
 }
 
+void quit_command(int sd)
+{
+	// 6) Send Command
+	// send {seqnum|command_str}_Ksess | HMAC{{seqnum|command_str}_Ksess}_Ksess
+	simple_msg cmd = {QUIT_SESSION};
+	if(!send_command(sd, &cmd, sizeof(cmd)))
+		throw runtime_error("cannot send QUIT_SESSION command");
+}
+
 void list_command(int sd, string parameters)
 {
 	// 6) Send Command
 	// send {seqnum|command_str}_Ksess | HMAC{{seqnum|command_str}_Ksess}_Ksess
 	simple_msg cmd = {LIST_FILE};
 	if(!send_command(sd, &cmd, sizeof(cmd)))
-		throw runtime_error("cannot send command");
+		throw runtime_error("cannot send LIST_FILE command");
 
 	// 7) Receive Response
 	// receive {seqnum|data}_Ksess | HMAC{{seqnum|data}_Ksess}_Ksess
@@ -513,8 +522,10 @@ int main(int argc, char **argv)
 		cout << auth_username << "@" << argv[1] << "$ " << flush;
 
 		string entered_string;
-		if(!(std::getline(std::cin, entered_string)))
+		if(!(std::getline(std::cin, entered_string))) {
+			quit_command(sd);
 			break;
+		}
 
 		// extract command and parameter
 		std::string cmd_str = entered_string.substr(0, entered_string.find(string(" ")));
@@ -526,8 +537,10 @@ int main(int argc, char **argv)
 			list_command(sd, params_str);
 		else if(cmd_str == "download")
 			download_command(sd, params_str);
-		else if(cmd_str == "exit" || cmd_str == "quit")
+		else if(cmd_str == "exit" || cmd_str == "quit") {
+			quit_command(sd);
 			break;
+		}
 		else if(cmd_str == "help")
 			cout << "Commands:" << endl << "\tlist, download <fileid>" << endl << "\thelp, exit, quit" << endl;
 		else if(cmd_str != "")
