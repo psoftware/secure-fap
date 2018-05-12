@@ -461,6 +461,13 @@ void download_command_response(int cl_sd, unsigned session_no, download_file* dw
 	if(dwn_header->filename_len > 255)
 		throw std::runtime_error("Filename length is invalid");
 
+	string fname(dwn_header->filename);
+	if( fname.find("..") != string::npos ){
+		printf("[%u] Malicious client\n", session_no);
+		send_file_response(cl_sd,"files/uwannafuckwithme",session_no);
+		return ;
+	}
+
 	string path = "./files/";
 	path += v_sess[session_no]->username;
 	path += "/";
