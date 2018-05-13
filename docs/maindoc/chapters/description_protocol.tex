@@ -8,7 +8,8 @@
 	\def\unitfactor{0.8}
 	\newinst[1]{cl}{:Client}
 	\newinst[10]{sr}{:Server}
-	\mess{cl}{ClientHello}{sr}
-	\mess{sr}{ServerHello}{cl}
-	\mess{cl}{\(\lbrace\)}{sr}
+	\mess{cl}{ClientHello,ClientNonce}{sr}
+	\mess{sr}{ServerHello,ServerNonce}{cl}
+	\mess{sr}{\(\lbrace\)ClientNonce,ServerNonce\(\rbrace\)\textsubscript{K\textsubscript{priv}}}{cl}
+	\mess{cl}{\(\lbrace\)ServerNonce,K\textsubscript{sess},Username,Password\(\rbrace\)\textsubscript{K\textsubscript{publ}}}{sr}
 \end{sequencediagram}
