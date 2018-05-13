@@ -1,0 +1,15 @@
+\chapter{Description of the protocol}
+\section{Introduction}
+   The protocol developed in this project has been designed to garantee secrecy, integrity and authentication. It is used by a simple client-server application wich allows clients to download files stored inside the server. \\
+   The overall protocol is based on public encrypt. Infact we suppose that the client already has the public key of the server stored on
+   its filesystem. The public encryption scheme allows to authenticate the server. It also allows to exchange a secret master key wich is used by symmetric ciphers to encrpyt the following communications. It is also used an HMAC to garantee integrity and nonces to garantee freshness of communications.
+\section{Description}
+   \begin{sequencediagram}
+	\newthread{a}{:Client}
+	\newthread[gray]{b}{:Server}
+	\mess{a}{CLIENT HELLO}{b}
+	\mess{b}{SEVER HELLO}{a}
+	\end{sequencediagram}
+
+	\begin{tikzpicture}
+	\begin{umlseqdiag}
