@@ -4,9 +4,10 @@
    The overall protocol is based on public encrypt. Infact we suppose that the client already has the public key of the server stored on
    its filesystem. The public encryption scheme allows to authenticate the server. It also allows to exchange a secret master key wich is used by symmetric ciphers to encrpyt the following communications. It is also used an HMAC to garantee integrity and nonces to garantee freshness of communications.
 \section{Description}
-   \begin{sequencediagram}
-	\newthread{a}{:Client}
-	\newthread[gray]{b}{:Server}
-	\mess{a}{CLIENT HELLO}{b}
-	\mess{b}{SEVER HELLO}{a}
-	\end{sequencediagram}
+\begin{sequencediagram}
+	\def\unitfactor{0.8}
+	\newinst[1]{cl}{:Client}
+	\newinst[10]{sr}{:Server}
+	\mess{cl}{ClientHello}{sr}
+	\mess{sr}{ServerHello}{cl}
+\end{sequencediagram}
