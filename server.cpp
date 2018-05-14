@@ -466,6 +466,8 @@ void download_command_response(int cl_sd, unsigned session_no, download_file* dw
 	if(dwn_header->filename_len > 255)
 		throw std::runtime_error("Filename length is invalid");
 
+	dwn_header->filename[dwn_header->filename_len] = '\0';
+
 	string fname(dwn_header->filename);
 	if( fname.find("..") != string::npos ){
 		printf("[%u] Malicious client\n", session_no);

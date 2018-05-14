@@ -54,7 +54,7 @@ typedef struct send_file_msg_t
 typedef struct download_file_t
 {
 	message_type t;
-	char filename[255];	//for most of file systems this is the max filename length
+	char filename[256];	//for most of file systems this is the max filename length
 	uint8_t filename_len;
 }__attribute__((packed)) download_file;
 
