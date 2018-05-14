@@ -120,7 +120,7 @@ void recv_hello_msg(int sd, unsigned session_no){
 
 void send_server_verification(int cl_sd, unsigned session_no)
 {
-	SignatureMaker sm("keys/rsa_server_privkey.pem");
+	SignatureMaker sm("keys/rsa_server_digsign_privkey.pem");
 
 	unsigned char to_sign[16];
 	memcpy(to_sign, &v_sess[session_no]->cl_nonce, 8);

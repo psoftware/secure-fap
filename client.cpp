@@ -91,7 +91,7 @@ bool verify_server_identity(int sd)
 	unsigned char *signature = new unsigned char[signature_len];
 	memcpy(signature, my_buff.buf, signature_len);
 
-	SignatureVerifier sv("keys/rsa_server_pubkey.pem");
+	SignatureVerifier sv("keys/rsa_server_digsign_pubkey.pem");
 
 	unsigned char expected_signed[16];
 	memcpy(expected_signed, &cl_nonce, 8);
