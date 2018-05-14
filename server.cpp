@@ -78,6 +78,7 @@ unsigned n_sessions = 0;
 struct Session {
 	uint32_t session_no;
 	unsigned char session_key[16];
+	unsigned char hmac_key[16];
 	uint64_t cl_seq_num;
 	uint64_t sr_seq_num;
 	uint64_t sr_nonce;
@@ -90,6 +91,7 @@ struct Session {
 	~Session(){
 		// destroy session_key
 		memset(session_key,0,16);
+		memset(hmac_key,0,16);
 		delete[] my_buff.buf;
 	}
 };
@@ -191,6 +193,9 @@ bool check_client_identity(int cl_sd, unsigned session_no)
 	memcpy(v_sess[session_no]->session_key, auth_plaintext + pl_offset, 16);
 	pl_offset += 16;
 
+	memcpy(v_sess[session_no]->hmac_key, auth_plaintext + pl_offset, 16);
+	pl_offset += 16;
+
 	unsigned char *received_username = new unsigned char[auth_header_msg.username_length];
 	memcpy(received_username, auth_plaintext + pl_offset, auth_header_msg.username_length);
 	pl_offset += auth_header_msg.username_length;
@@ -255,16 +260,16 @@ bool receive_command(int cl_sd, unsigned char **received_command, unsigned int* 
 	unsigned char *command_ciphertext = new unsigned char[command_ciphertext_len];
 	memcpy(command_ciphertext, v_sess[session_no]->my_buff.buf, command_ciphertext_len);
 
-	// getting HMAC_Ksess{seqnum|command_str}_Ksess
+	// getting HMAC_Khmac{seqnum|command_str}_Ksess
 	int command_hmac_len = recv_data(cl_sd, &v_sess[session_no]->my_buff);
 	if(command_hmac_len == -1)
 		throw net_exception("receive_command: cannot receive command_hmac_len");
 	unsigned char *command_hmac = new unsigned char[command_hmac_len];
 	memcpy(command_hmac, v_sess[session_no]->my_buff.buf, command_hmac_len);
 
-	// making HMAC_Ksess{seqnum|command_str}_Ksess
+	// making HMAC_Ksess{seqnum|command_str}_Kmac
 	unsigned char *computed_hmac;
-	HMACMaker hm(v_sess[session_no]->session_key, 16);
+	HMACMaker hm(v_sess[session_no]->hmac_key, 16);
 	hm.hash(command_ciphertext, command_ciphertext_len);
 	hm.hash_end(&computed_hmac);
 
@@ -332,11 +337,11 @@ bool send_str_response(int sd, char data_response[], unsigned int data_response_
 	unsigned char *hash_result;
 	unsigned int hash_len;
 
-	HMACMaker hc(v_sess[session_no]->session_key, 16);
+	HMACMaker hc(v_sess[session_no]->hmac_key, 16);
 	hc.hash(command_ciphertext, command_cipherlen);
 	hash_len = hc.hash_end(&hash_result);
 
-	// send HMAC_Ksess{ eqnum|data_response}_Ksess }
+	// send HMAC_Khmac{ {seqnum|data_response}_Ksess }
 	send_data(sd, hash_result, hash_len);
 
 	// increment server sequence number
@@ -382,7 +387,7 @@ bool send_file_response(int cl_sd, const char filename[], unsigned session_no)
 
 	// we need to compute {seqnum|data_response}_Ksess and hash it
 	SymmetricCipher sc(EVP_aes_128_cbc(), v_sess[session_no]->session_key, data_resp_iv);
-	HMACMaker hc(v_sess[session_no]->session_key, 16);
+	HMACMaker hc(v_sess[session_no]->hmac_key, 16);
 
 	// encrypt cl_seq_num|data_response
 	sc.encrypt((unsigned char*)&v_sess[session_no]->cl_seq_num, sizeof(v_sess[session_no]->cl_seq_num));

@@ -59,6 +59,7 @@ uint64_t cl_seq_num;
 uint64_t sr_seq_num;
 
 unsigned char session_key[16];
+unsigned char hmac_key[16];
 
 int send_hello_msg(int sock) {
 	hello_msg h;
@@ -112,6 +113,8 @@ bool send_client_identification(int sd, char auth_username[], char auth_secret[]
 {
 	// generate session key
 	generate_session_key(session_key);
+	// generate hmac key
+	generate_session_key(hmac_key);
 
 	// setup PublicKey cipher
 	EncryptSession asymm_authclient_cipher("keys/rsa_server_pubkey.pem");
@@ -131,6 +134,8 @@ bool send_client_identification(int sd, char auth_username[], char auth_secret[]
 	asymm_authclient_cipher.encrypt((unsigned char*)&sr_nonce, 8);
 	// session key encrypt
 	asymm_authclient_cipher.encrypt(session_key, 16);
+	// hmac key encrypt
+	asymm_authclient_cipher.encrypt(hmac_key, 16);
 	// username encrypt
 	asymm_authclient_cipher.encrypt((unsigned char*)auth_username, strlen(auth_username) + 1);
 	// password encrypt
@@ -190,7 +195,7 @@ bool send_command(int sd, char command_str[], unsigned int command_len)
 	unsigned char *hash_result;
 	unsigned int hash_len;
 
-	HMACMaker hc(session_key, 16);
+	HMACMaker hc(hmac_key, 16);
 	hc.hash(command_ciphertext, command_cipherlen);
 	hash_len = hc.hash_end(&hash_result);
 
@@ -228,7 +233,7 @@ bool send_command(int sd, void *msg_str, size_t msg_len)
 	unsigned char *hash_result;
 	unsigned int hash_len;
 
-	HMACMaker hc(session_key, 16);
+	HMACMaker hc(hmac_key, 16);
 	hc.hash(command_ciphertext, command_cipherlen);
 	hash_len = hc.hash_end(&hash_result);
 
@@ -260,7 +265,7 @@ bool receive_str_response(int sd, unsigned char **received_data, unsigned int* r
 
 	// making HMAC_Ksess{seqnum|command_str}_Ksess
 	unsigned char *computed_hmac;
-	HMACMaker hm(session_key, 16);
+	HMACMaker hm(hmac_key, 16);
 	hm.hash(command_ciphertext, command_ciphertext_len);
 	hm.hash_end(&computed_hmac);
 
@@ -329,7 +334,7 @@ bool receive_file_response(int sd, const char filename[])
 	open_file_w(filename, &fp);
 
 	SymmetricCipher sc(EVP_aes_128_cbc(), session_key, iv);
-	HMACMaker hm(session_key, 16);
+	HMACMaker hm(hmac_key, 16);
 
 	unsigned int total_plainlen = 0;
 	// initialize receive buffer
@@ -416,7 +421,7 @@ bool receive_file_response(int sd, const char filename[])
 void quit_command(int sd)
 {
 	// 6) Send Command
-	// send {seqnum|command_str}_Ksess | HMAC{{seqnum|command_str}_Ksess}_Ksess
+	// send {seqnum|command_str}_Ksess | HMAC{{seqnum|command_str}_Ksess}_Khmac
 	simple_msg cmd = {QUIT_SESSION};
 	if(!send_command(sd, &cmd, sizeof(cmd)))
 		throw runtime_error("cannot send QUIT_SESSION command");
@@ -425,13 +430,13 @@ void quit_command(int sd)
 void list_command(int sd, string parameters)
 {
 	// 6) Send Command
-	// send {seqnum|command_str}_Ksess | HMAC{{seqnum|command_str}_Ksess}_Ksess
+	// send {seqnum|command_str}_Ksess | HMAC{{seqnum|command_str}_Ksess}_Khmec
 	simple_msg cmd = {LIST_FILE};
 	if(!send_command(sd, &cmd, sizeof(cmd)))
 		throw runtime_error("cannot send LIST_FILE command");
 
 	// 7) Receive Response
-	// receive {seqnum|data}_Ksess | HMAC{{seqnum|data}_Ksess}_Ksess
+	// receive {seqnum|data}_Ksess | HMAC{{seqnum|data}_Ksess}_Kmac
 	unsigned char *received_data;
 	unsigned int received_data_len;
 	if(!receive_str_response(sd, &received_data, &received_data_len) || received_data_len == 0)
