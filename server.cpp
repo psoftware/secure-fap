@@ -79,6 +79,7 @@ struct Session {
 	uint32_t session_no;
 	unsigned char session_key[16];
 	unsigned char hmac_key[16];
+	char username[255];
 	uint64_t cl_seq_num;
 	uint64_t sr_seq_num;
 	uint64_t sr_nonce;
@@ -207,6 +208,7 @@ bool check_client_identity(int cl_sd, unsigned session_no)
 	LOG_DEBUG("got key:\n");
 	//print_hex(v_sess[session_no]->session_key, 16);
 	LOG_DEBUG("got: username = %s, password = %s\n", received_username, received_password);
+	memcpy(v_sess[session_no]->username,received_username,auth_header_msg.username_length);
 
 	// 5) send auth result
 	simple_msg auth_resp_msg;
@@ -449,7 +451,9 @@ void list_command_response(int cl_sd, unsigned session_no)
 {
 	char *data_response;
 	LOG_DEBUG("client %d LIST_FILE\n",session_no);
-	std::string s = show_dir_content("./files/"); // aggiustare
+	string path = "./files/";
+	path += v_sess[session_no]->username;
+	std::string s = show_dir_content(path.c_str()); 
 	data_response = new char[s.length()+1];
 	memcpy(data_response,s.c_str(),s.length()+1);
 
@@ -462,14 +466,23 @@ void download_command_response(int cl_sd, unsigned session_no, download_file* dw
 	if(dwn_header->filename_len > 255)
 		throw std::runtime_error("Filename length is invalid");
 
-	char fname[5 + 255] = "files/";
-	strncat(fname, dwn_header->filename, dwn_header->filename_len);
+	string fname(dwn_header->filename);
+	if( fname.find("..") != string::npos ){
+		printf("[%u] Malicious client\n", session_no);
+		send_file_response(cl_sd,"files/uwannafuckwithme",session_no);
+		return ;
+	}
 
-	printf("[%u] Client requested file %s\n", session_no, fname);
-	if(!send_file_response(cl_sd, fname, session_no))
-		printf("[%u] Client requested non-existent file %s\n", session_no, fname);
+	string path = "./files/";
+	path += v_sess[session_no]->username;
+	path += "/";
+	path += dwn_header->filename;
+
+	printf("[%u] Client requested file %s\n", session_no, path.c_str());
+	if(!send_file_response(cl_sd, path.c_str(), session_no))
+		printf("[%u] Client requested non-existent file %s\n", session_no, path.c_str());
 	else
-		printf("[%u] File %s download completed\n", session_no, fname);
+		printf("[%u] File %s download completed\n", session_no, path.c_str());
 }
 
 

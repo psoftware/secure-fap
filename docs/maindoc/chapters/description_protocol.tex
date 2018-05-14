@@ -1,0 +1,18 @@
+\chapter{Description of the protocol}
+\section{Introduction}
+   The protocol developed in this project has been designed to garantee secrecy, integrity and authentication. It is used by a simple client-server application wich allows clients to download files stored inside the server. \\
+   The overall protocol is based on public encrypt. Infact we suppose that the client already has the public key of the server stored on
+   its filesystem. The public encryption scheme allows to authenticate the server. It also allows to exchange a secret master key wich is used by symmetric ciphers to encrpyt the following communications. It is also used an HMAC to garantee integrity and nonces to garantee freshness of communications.
+\section{Description}
+\begin{sequencediagram}
+	\def\unitfactor{1}
+	\newinst[0]{cl}{:Client}
+	\newinst[11]{sr}{:Server}
+	\mess{cl}{1) ClientHello,ClientNonce}{sr}
+	\mess{sr}{2) ServerHello,ServerNonce}{cl}
+	\mess{sr}{3) \(\lbrace\)ClientNonce,ServerNonce\(\rbrace\)\textsubscript{K\textsubscript{priv}}}{cl}
+	\mess{cl}{4) \(\lbrace\)ServerNonce,K\textsubscript{sess},Username,Password\(\rbrace\)\textsubscript{K\textsubscript{publ}}}{sr}
+	\mess{sr}{5) Authentication OK}{cl}
+	\mess{cl}{6) \(\lbrace\)Command,ServerNonce+1\(\rbrace\)\textsubscript{K\textsubscript{sess}}, HMAC\textsubscript{K\textsubscript{sess}}(Command,ServerNonce+1)}{sr}
+	\mess{sr}{7) \(\lbrace\)Response,ClientNonce+1\(\rbrace\)\textsubscript{K\textsubscript{sess}},HMAC\textsubscript{K\textsubscript{sess}}(Response,ClientNonce+1)}{cl}
+\end{sequencediagram}
