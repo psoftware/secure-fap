@@ -25,7 +25,8 @@
 \usetikzlibrary{positioning, automata}
 \usetikzlibrary{fit}
 \usetikzlibrary{decorations.pathreplacing}
-
+\usepackage{mathtools}
+\usepackage{amssymb}
 
 \usepackage{pgf-umlsd}
 \renewcommand{\mess}[4][0]{
@@ -38,7 +39,6 @@
     \draw[->,>=angle 60] (mess from) -- (mess to) node[midway, above]
     {#3};
 }
-
 \usepackage{caption}
 
 \usepackage{placeins}

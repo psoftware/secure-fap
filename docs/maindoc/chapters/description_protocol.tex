@@ -16,3 +16,26 @@
 	\mess{cl}{6) \(\lbrace\)Command,ServerNonce+1\(\rbrace\)\textsubscript{K\textsubscript{sess}}, HMAC\textsubscript{K\textsubscript{sess}}(Command,ServerNonce+1)}{sr}
 	\mess{sr}{7) \(\lbrace\)Response,ClientNonce+1\(\rbrace\)\textsubscript{K\textsubscript{sess}},HMAC\textsubscript{K\textsubscript{sess}}(Response,ClientNonce+1)}{cl}
 \end{sequencediagram}
+
+\section{BAN Logic}
+\newcommand{\believes}{\mid\equiv}
+\newcommand{\sees}{\triangleleft}
+\newcommand{\oncesaid}{\mid\sim}
+\newcommand{\controls}{\Rightarrow}
+\newcommand{\fresh}[1]{\#(#1)}
+\newcommand{\combine}[2]{{\langle #1 \rangle}_{#2}}
+\newcommand{\encrypt}[2]{{ \{ #1 \} }_{#2}}
+\newcommand{\sharekey}[1]{\xleftrightarrow{#1}}
+\newcommand{\pubkey}[1]{\xleftrightarrow{#1}}
+\newcommand{\secret}[1]{\xleftrightharpoons{#1}}
+
+\[A \believes B \]
+\[A \sees B \]
+\[A \oncesaid B \]
+\[A \controls B \]
+\[\fresh{X}\]
+\[\combine{X}{Y}\]
+\[\encrypt{X}{Y}\]
+\[A \sharekey{k} B \]
+\[A \pubkey{k} B\]
+\[A \secret{k} B\]
