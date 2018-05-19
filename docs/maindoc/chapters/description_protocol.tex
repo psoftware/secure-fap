@@ -41,8 +41,19 @@
 \[A \secret{k} B\]
 
 \paragraph{Ipothesis}
-\[\textnormal{Client} \believes \pubkey{k} \textnormal{Server}\]
+\[\textnormal{Client} \believes \pubkey{K\textsubscript{publ}} \textnormal{Server}\]
 \[\textnormal{Server} \believes \textnormal{Client} \controls K_{session}\]
 \[\textnormal{Client} \believes \fresh{n_c}\]
 \[\textnormal{Server} \believes \fresh{n_s}\]
+\[\textnormal{Server} \controls n_s\]
+\[\textnormal{Client} \controls n_c\]
+
+\paragraph{Objectives}
+\[\textnormal{Client} \believes \textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{Server}\]
+\[\textnormal{Server} \believes \textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{Server}\]
+\[\textnormal{Client} \believes \textnormal{Server} \believes \textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{Server}\]
+\[\textnormal{Server} \believes \textnormal{Client} \believes \textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{Server}\]
+\[\textnormal{Client} \believes \fresh{\textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{Server}}\]
+\[\textnormal{Server} \believes \fresh{\textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{Server}}\]
+
 \paragraph{Proof}
