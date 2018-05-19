@@ -8,13 +8,13 @@
 	\def\unitfactor{1}
 	\newinst[0]{cl}{:Client}
 	\newinst[11]{sr}{:Server}
-	\mess{cl}{1) ClientHello,ClientNonce}{sr}
-	\mess{sr}{2) ServerHello,ServerNonce}{cl}
-	\mess{sr}{3) \(\lbrace\)ClientNonce,ServerNonce\(\rbrace\)\textsubscript{K\textsubscript{priv}}}{cl}
-	\mess{cl}{4) \(\lbrace\)ServerNonce,K\textsubscript{sess},Username,Password\(\rbrace\)\textsubscript{K\textsubscript{publ}}}{sr}
-	\mess{sr}{5) Authentication OK}{cl}
-	\mess{cl}{6) \(\lbrace\)Command,ServerNonce+1\(\rbrace\)\textsubscript{K\textsubscript{sess}}, HMAC\textsubscript{K\textsubscript{sess}}(Command,ServerNonce+1)}{sr}
-	\mess{sr}{7) \(\lbrace\)Response,ClientNonce+1\(\rbrace\)\textsubscript{K\textsubscript{sess}},HMAC\textsubscript{K\textsubscript{sess}}(Response,ClientNonce+1)}{cl}
+	\mess{cl}{\small1) ClientHello,ClientNonce}{sr}
+	\mess{sr}{\small2) ServerHello,ServerNonce}{cl}
+	\mess{sr}{\small3) \(\lbrace\)ClientNonce,ServerNonce\(\rbrace\)\textsubscript{K\textsubscript{priv}}}{cl}
+	\mess{cl}{\small4) \(\lbrace\)ServerNonce,K\textsubscript{sess},Username,Password\(\rbrace\)\textsubscript{K\textsubscript{publ}}}{sr}
+	\mess{sr}{\small5) Authentication OK}{cl}
+	\mess{cl}{\small6) \(\lbrace\)Command,ServerNonce+1\(\rbrace\)\textsubscript{K\textsubscript{sess}}, HMAC\textsubscript{K\textsubscript{sess}}(Command,ServerNonce+1)}{sr}
+	\mess{sr}{\small7) \(\lbrace\)Response,ClientNonce+1\(\rbrace\)\textsubscript{K\textsubscript{sess}},HMAC\textsubscript{K\textsubscript{sess}}(Response,ClientNonce+1)}{cl}
 \end{sequencediagram}
 
 \section{BAN Logic}
@@ -41,12 +41,13 @@
 \[A \secret{k} B\]
 
 \paragraph{Ipothesis}
-\[\textnormal{Client} \believes \pubkey{K\textsubscript{publ}} \textnormal{Server}\]
-\[\textnormal{Server} \believes \textnormal{Client} \controls K_{session}\]
 \[\textnormal{Client} \believes \fresh{n_c}\]
 \[\textnormal{Server} \believes \fresh{n_s}\]
 \[\textnormal{Server} \controls n_s\]
 \[\textnormal{Client} \controls n_c\]
+\[\textnormal{Client} \believes \pubkey{K\textsubscript{publ}} \textnormal{Server}\]
+\[\textnormal{Server} \believes \textnormal{Client} \controls K_{session}\]
+\[\textnormal{Server} \believes \textnormal{Client} \sharekey{password} \textnormal{Server}\]
 
 \paragraph{Objectives}
 \[\textnormal{Client} \believes \textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{Server}\]
@@ -56,4 +57,8 @@
 \[\textnormal{Client} \believes \fresh{\textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{Server}}\]
 \[\textnormal{Server} \believes \fresh{\textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{Server}}\]
 
-\paragraph{Proof}
+\paragraph{Idealized Protocol}
+\[\textnormal{M3: Server} \rightarrow \textnormal{Client} \lbrace n_c,n_s \rbrace \textsubscript{priv} \]
+\[\textnormal{M4: Client} \rightarrow \textnormal{Server} \lbrace n_s,K\textsubscript{sess},Username,Password \rbrace \textsubscript{publ}\]
+\[\textnormal{M6: Client} \rightarrow \textnormal{Server} \lbrace CMD,n\textsubscript{s+1} \rbrace \textsubscript{K\textsubscript{sees}}\]
+\[\textnormal{M7: Server} \rightarrow \textnormal{Client} \lbrace RESP,n\textsubscript{c+1} \rbrace \textsubscript{K\textsubscript{sess}}\]
