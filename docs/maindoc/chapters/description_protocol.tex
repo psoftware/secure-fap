@@ -52,10 +52,11 @@
 \paragraph{Objectives}
 \[\textnormal{Client} \believes \textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{Server}\]
 \[\textnormal{Server} \believes \textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{Server}\]
-\[\textnormal{Client} \believes \textnormal{Server} \believes \textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{Server}\]
-\[\textnormal{Server} \believes \textnormal{Client} \believes \textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{Server}\]
-\[\textnormal{Client} \believes \fresh{\textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{Server}}\]
+%\[\textnormal{Client} \believes \textnormal{Server} \believes \textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{Server}\]
+%\[\textnormal{Server} \believes \textnormal{Client} \believes \textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{Server}\]
 \[\textnormal{Server} \believes \fresh{\textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{Server}}\]
+\[\textnormal{Sever} \believes \textnormal{Client}\believes CMD\]
+\[\textnormal{Client} \believes \textnormal{Server}\believes RESP\]
 
 \paragraph{Idealized Protocol}
 \[\textnormal{M3: Server} \rightarrow \textnormal{Client} \lbrace n_c,n_s \rbrace \textsubscript{priv} \]
