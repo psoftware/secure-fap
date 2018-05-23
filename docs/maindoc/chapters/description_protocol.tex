@@ -43,11 +43,11 @@
 \paragraph{Ipothesis}
 \[\textnormal{Client} \believes \fresh{n_c}\]
 \[\textnormal{Server} \believes \fresh{n_s}\]
-\[\textnormal{Server} \controls n_s\]
-\[\textnormal{Client} \controls n_c\]
+\[\textnormal{Client} \believes \textnormal{Server} \controls n_s\]
+\[\textnormal{Server} \believes \textnormal{Client} \controls n_c\]
 \[\textnormal{Client} \believes \pubkey{K\textsubscript{publ}} \textnormal{Server}\]
 \[\textnormal{Server} \believes \textnormal{Client} \controls K_{session}\]
-\[\textnormal{Server} \believes \textnormal{Client} \sharekey{password} \textnormal{Server}\]
+\[\textnormal{Server} \believes \textnormal{Client} \secret{password} \textnormal{Server}\]
 
 \paragraph{Objectives}
 \[\textnormal{Client} \believes \textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{Server}\]
@@ -60,6 +60,6 @@
 
 \paragraph{Idealized Protocol}
 \[\textnormal{M3: Server} \rightarrow \textnormal{Client} \lbrace n_c,n_s \rbrace \textsubscript{priv} \]
-\[\textnormal{M4: Client} \rightarrow \textnormal{Server} \lbrace n_s,K\textsubscript{sess},Username,Password \rbrace \textsubscript{publ}\]
+\[\textnormal{M4: Client} \rightarrow \textnormal{Server} \lbrace n_s,\textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{Server} ,Username,Password \rbrace \textsubscript{publ}\]
 \[\textnormal{M6: Client} \rightarrow \textnormal{Server} \lbrace CMD,n\textsubscript{s+1} \rbrace \textsubscript{K\textsubscript{sees}}\]
 \[\textnormal{M7: Server} \rightarrow \textnormal{Client} \lbrace RESP,n\textsubscript{c+1} \rbrace \textsubscript{K\textsubscript{sess}}\]
