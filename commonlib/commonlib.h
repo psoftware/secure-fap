@@ -30,6 +30,7 @@
 #include "DynamicArray.h"
 
 /* ##### OpenSSL Help Functions ##### */;
+void secure_zero(void *s, size_t n);
 
 uint64_t generate_nonce();
 void generate_session_key(unsigned char key[]);

@@ -53,6 +53,11 @@ void open_file_w(const char *filename, FILE **fp)
 }
 
 /* ##### OpenSSL Help Functions ##### */
+void secure_zero(void *s, size_t n)
+{
+	volatile char *p = (char*)s;
+	while (n--) *p++ = 0;
+}
 
 uint64_t generate_nonce()
 {
