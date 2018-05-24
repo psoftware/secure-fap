@@ -91,8 +91,8 @@ struct Session {
 	}
 	~Session(){
 		// destroy session_key
-		memset(session_key,0,16);
-		memset(hmac_key,0,16);
+		secure_zero(session_key,16);
+		secure_zero(hmac_key,16);
 		delete[] my_buff.buf;
 	}
 };
@@ -177,7 +177,7 @@ bool check_client_identity(int cl_sd, unsigned session_no)
 		throw net_exception("check_client_identity: cannot receive auth_header_msg");
 
 	// decode ciphertext
-	unsigned char *auth_plaintext = new unsigned char[auth_header_msg.total_ciphertext_size];
+	unsigned char *auth_plaintext = NULL;
 	unsigned int auth_plainlen = 0;
 	asymm_authclient_decipher.decrypt(v_sess[session_no]->my_buff.buf, auth_cipherlen);
 	asymm_authclient_decipher.decrypt_end();
@@ -225,6 +225,9 @@ bool check_client_identity(int cl_sd, unsigned session_no)
 	unsigned char hash_result[32];
 	if(!compute_SHA256(received_password, auth_header_msg.password_length - 1, hash_result))
 		return false;
+
+	secure_zero(received_password,auth_header_msg.password_length);
+	delete[] received_password;
 
 	char hash_hex_result[64 + 1];
 	SHA1hash_to_string(hash_result, hash_hex_result);
