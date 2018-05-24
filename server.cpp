@@ -246,11 +246,22 @@ bool check_client_identity(int cl_sd, unsigned session_no)
 
 	send_data(cl_sd, (unsigned char*)&auth_resp_msg, sizeof(auth_resp_msg));
 
+	unsigned char *hashmac_result = NULL;
+	unsigned int hashmac_len;
+
+	HMACMaker hc(v_sess[session_no]->hmac_key, 16);
+	hc.hash((unsigned char*)&auth_resp_msg, sizeof(auth_resp_msg));
+	hashmac_len = hc.hash_end(&hashmac_result);
+
+	// send HMAC_Khmac{ AUTHENTICATION }
+	send_data(cl_sd, hashmac_result, hashmac_len);
+
 	secure_zero(received_password,auth_header_msg.password_length);
 	delete[] received_password;
 	delete[] received_username;
 	delete[] auth_iv;
 	delete[] auth_plaintext;
+	delete[] hashmac_result;
 
 	return result;
 }

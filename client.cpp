@@ -159,17 +159,37 @@ bool send_client_identification(int sd, char auth_username[], char auth_secret[]
 
 bool wait_for_authentication_response(int sd)
 {
+	bool result = false;
 	simple_msg auth_response_msg;
 	recv_data(sd, &my_buff);
 	memcpy(&auth_response_msg, my_buff.buf, sizeof(auth_response_msg));
 
-	if(auth_response_msg.t == AUTHENTICATION_FAILED)
+	unsigned int command_hmac_len = recv_data(sd, &my_buff);
+	unsigned char *command_hmac = new unsigned char[command_hmac_len];
+	memcpy(command_hmac, my_buff.buf, command_hmac_len);
+
+	// making HMAC_Ksess{seqnum|command_str}_Ksess
+	unsigned char *computed_hmac;
+	HMACMaker hm(hmac_key, 16);
+	hm.hash((unsigned char*)&auth_response_msg, sizeof(auth_response_msg));
+	hm.hash_end(&computed_hmac);
+
+	if(CRYPTO_memcmp(computed_hmac, command_hmac, HMAC_LENGTH) != 0)
 	{
-		printf("Authentication Failed!\n");
-		return false;
+		printf("--MESSAGE AUTHENTICATION CORRUPTED!\n");
+		result = false;
 	}
 
-	return true;
+	if(auth_response_msg.t == AUTHENTICATION_FAILED )
+	{
+		printf("Authentication Failed!\n");
+		result = false;
+	} else
+		result = true;
+
+	delete[] computed_hmac;
+
+	return result;
 }
 
 bool send_command(int sd, void *msg_str, size_t msg_len)
@@ -206,6 +226,8 @@ bool send_command(int sd, void *msg_str, size_t msg_len)
 
 	// increment server sequence number
 	sr_seq_num++;
+
+	delete[] command_iv;
 
 	return true;
 }
@@ -249,6 +271,11 @@ bool receive_str_response(int sd, unsigned char **received_data, unsigned int* r
 	sc.decrypt_end();
 	command_plainlen = sc.flush_plaintext(&command_plaintext);
 
+	delete[] command_iv;
+	delete[] command_ciphertext;
+	delete[] command_hmac;
+	delete[] computed_hmac;
+
 	// verify sequence number
 	uint64_t received_seqno;
 	memcpy((void*)&received_seqno, command_plaintext, sizeof(uint64_t));
@@ -270,7 +297,6 @@ bool receive_str_response(int sd, unsigned char **received_data, unsigned int* r
 	memcpy(*received_data, data_text, data_text_len);
 	*received_data_len = data_text_len;
 	LOG_DEBUG("receive_str_response: size = %u\n", data_text_len);
-
 	return true;
 }
 
