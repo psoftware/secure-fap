@@ -11,8 +11,8 @@
 	\mess{cl}{\small1) ClientHello,n\textsubscript{c}}{sr}
 	\mess{sr}{\small2) ServerHello,n\textsubscript{s}}{cl}
 	\mess{sr}{\small3) \(\lbrace\)n\textsubscript{c},n\textsubscript{s}\(\rbrace\)\textsubscript{K\textsubscript{priv}}}{cl}
-	\mess{cl}{\small4) \(\lbrace\)n\textsubscript{s},K\textsubscript{sess},Username,Password\(\rbrace\)\textsubscript{K\textsubscript{publ}}}{sr}
-	\mess{sr}{\small5) Authentication OK}{cl}
+	\mess{cl}{\small4) \(\lbrace\)n\textsubscript{s},K\textsubscript{sess},K\textsubscript{mac},Username,Password\(\rbrace\)\textsubscript{K\textsubscript{publ}}}{sr}
+	\mess{sr}{\small5) Authentication OK,HMAC\textsubscript{K\textsubscript{mac}}(Authentication OK)}{cl}
 	\mess{cl}{\small6) \(\lbrace\)Command,n\textsubscript{s+1}\(\rbrace\)\textsubscript{K\textsubscript{sess}}, HMAC\textsubscript{K\textsubscript{mac}}(\(\lbrace\)Command,n\textsubscript{s+1}\(\rbrace\)\textsubscript{K\textsubscript{sess}})}{sr}
 	\mess{sr}{\small7) \(\lbrace\)Response,n\textsubscript{c+1}\(\rbrace\)\textsubscript{K\textsubscript{sess}},HMAC\textsubscript{K\textsubscript{mac}}(\(\lbrace\)Response,n\textsubscript{c+1}\(\rbrace\)\textsubscript{K\textsubscript{sess}})}{cl}
 \end{sequencediagram}
