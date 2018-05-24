@@ -138,6 +138,8 @@ void send_server_verification(int cl_sd, unsigned session_no)
 
 bool check_client_identity(int cl_sd, unsigned session_no)
 {
+	bool result = false;
+
 	// 4) Validate Client and Get Session key
 	// getting session encrypted key
 	unsigned int auth_encrypted_key_len = recv_data(cl_sd, &v_sess[session_no]->my_buff);
@@ -226,9 +228,7 @@ bool check_client_identity(int cl_sd, unsigned session_no)
 	if(!compute_SHA256(received_password, auth_header_msg.password_length - 1, hash_result))
 		return false;
 
-	secure_zero(received_password,auth_header_msg.password_length);
-	delete[] received_password;
-
+	
 	char hash_hex_result[64 + 1];
 	SHA1hash_to_string(hash_result, hash_hex_result);
 	//printf("Hash: %s\n", hash_hex_result);
@@ -237,16 +237,22 @@ bool check_client_identity(int cl_sd, unsigned session_no)
 	{
 		LOG_ERROR("error: login failed!\n");
 		auth_resp_msg.t = AUTHENTICATION_FAILED;
-		send_data(cl_sd, (unsigned char*)&auth_resp_msg, sizeof(auth_resp_msg));
-		return false;
+		result = false;
+	} else {
+		LOG_INFO("Client authentication success!\n");
+		auth_resp_msg.t = AUTHENTICATION_OK;
+		result = true;
 	}
 
-	LOG_INFO("Client authentication success!\n");
-
-	auth_resp_msg.t = AUTHENTICATION_OK;
 	send_data(cl_sd, (unsigned char*)&auth_resp_msg, sizeof(auth_resp_msg));
 
-	return true;
+	secure_zero(received_password,auth_header_msg.password_length);
+	delete[] received_password;
+	delete[] received_username;
+	delete[] auth_iv;
+	delete[] auth_plaintext;
+
+	return result;
 }
 
 bool receive_command(int cl_sd, unsigned char **received_command, unsigned int* received_command_len, unsigned session_no)
