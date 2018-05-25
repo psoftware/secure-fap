@@ -134,10 +134,12 @@ struct Session {
 		my_buff.size = 0;
 	}
 	~Session(){
-		// destroy session_key
 		secure_zero(session_key,16);
 		secure_zero(hmac_key,16);
-		delete[] my_buff.buf;
+		if( my_buff.buf != NULL ){
+			secure_zero(my_buff.buf,my_buff.size);
+			free(my_buff.buf);
+		}
 	}
 };
 
