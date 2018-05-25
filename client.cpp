@@ -87,7 +87,12 @@ int analyze_message(unsigned char* buf)
 
 bool verify_server_identity(int sd)
 {
-	unsigned int signature_len = recv_data(sd, &my_buff);
+	int signature_len = recv_data(sd, &my_buff);
+	if(signature_len <= 0)
+	{
+		LOG_ERROR("verify_server_identity: cannot recv signature_len\n");
+		return false;
+	}
 	unsigned char *signature = new unsigned char[signature_len];
 	memcpy(signature, my_buff.buf, signature_len);
 
