@@ -319,6 +319,12 @@ finally:
 	send_data(cl_sd, hashmac_result, hashmac_len);
 
 	secure_zero(received_password,auth_header_msg.password_length);
+	if(password_and_salt != NULL)
+	{
+		secure_zero(password_and_salt, strlen(password_and_salt)+1);
+		delete[] password_and_salt;
+	}
+
 	delete[] received_password;
 	delete[] received_username;
 	delete[] auth_iv;
