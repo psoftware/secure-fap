@@ -385,7 +385,10 @@ bool receive_file_response(int sd, const char filename[])
 			delete[] padding_plaintext;
 		}
 
-		delete[] chunk_plaintext;
+		if(i == 0)
+			delete[] (chunk_plaintext - sizeof(uint64_t));
+		else
+			delete[] chunk_plaintext;
 	}
 
 	// getting from client HMAC_Ksess{seqnum|command_str}_Ksess
