@@ -381,7 +381,11 @@ bool receive_file_response(int sd, const char filename[])
 
 			// write latest block (without padding)
 			fwrite(padding_plaintext, 1, padding_plainlen, fp);
+
+			delete[] padding_plaintext;
 		}
+
+		delete[] chunk_plaintext;
 	}
 
 	// getting from client HMAC_Ksess{seqnum|command_str}_Ksess
