@@ -38,6 +38,7 @@ bool sqlite_check_password(sqlite3 *db, char *username, char *hashed_password)
 	int rc = sqlite3_prepare_v2(db, prepared_sql, -1, &stmt, NULL);
 	if (rc != SQLITE_OK) {
 		LOG_ERROR("sqlite_check_password: prepare error!\n");
+		sql_mutex.unlock();
 		return false;
 	}
 
@@ -45,6 +46,7 @@ bool sqlite_check_password(sqlite3 *db, char *username, char *hashed_password)
 		sqlite3_bind_text(stmt, 2, hashed_password, strlen(hashed_password), SQLITE_STATIC))
 	{
 		LOG_ERROR("sqlite_check_password: prepare error!\n");
+		sql_mutex.unlock();
 		return false;
 	}
 
