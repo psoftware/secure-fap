@@ -19,7 +19,7 @@
 #include "net_wrapper.h"
 
 
-#define CHUNK_SIZE 32
+#define CHUNK_SIZE 1024
 #define HMAC_LENGTH 32
 
 #include "EncryptSession.h"
