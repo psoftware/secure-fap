@@ -28,6 +28,48 @@
 std::mutex sql_mutex;
 sqlite3 *database;
 
+bool sqlite_get_user_salt(sqlite3 *db, char *username, char **salt_string)
+{
+	char prepared_sql[] = "SELECT salt FROM users WHERE username = ?;";
+
+	sqlite3_stmt *stmt = NULL;
+
+	sql_mutex.lock();
+	int rc = sqlite3_prepare_v2(db, prepared_sql, -1, &stmt, NULL);
+	if (rc != SQLITE_OK) {
+		LOG_ERROR("sqlite_get_user_salt: prepare error!\n");
+		sql_mutex.unlock();
+		return false;
+	}
+
+	if(sqlite3_bind_text(stmt, 1, username, strlen(username), SQLITE_STATIC))
+	{
+		LOG_ERROR("sqlite_get_user_salt: prepare error!\n");
+		sql_mutex.unlock();
+		return false;
+	}
+
+	rc = sqlite3_step(stmt);
+	if(rc != SQLITE_ROW)
+	{
+		if(rc == SQLITE_DONE)
+			LOG_ERROR("sqlite_get_user_salt: empty result!\n");
+		else
+			LOG_ERROR("sqlite_get_user_salt: step error!\n");
+
+		sql_mutex.unlock();
+		return false;
+	}
+	char *result_string = (char *)sqlite3_column_text(stmt, 0);
+	*salt_string = new char[strlen(result_string)+1];
+	strcpy(*salt_string, result_string);
+
+	rc = sqlite3_finalize(stmt);
+	sql_mutex.unlock();
+
+	return true;
+}
+
 bool sqlite_check_password(sqlite3 *db, char *username, char *hashed_password)
 {
 	char prepared_sql[] = "SELECT COUNT(*) FROM users WHERE username = ? AND password = ?;";
@@ -225,27 +267,45 @@ bool check_client_identity(int cl_sd, unsigned session_no)
 		return false;
 	}
 
-	// compute SHA256 password hash
+	char *salt_string = NULL;
+	char *password_and_salt = NULL;
 	unsigned char hash_result[32];
-	if(!compute_SHA256(received_password, auth_header_msg.password_length - 1, hash_result))
-		return false;
-
-	
 	char hash_hex_result[64 + 1];
+
+	if(!sqlite_get_user_salt(database, (char*)received_username, &salt_string))
+	{
+		LOG_ERROR("error: login failed!\n");
+		auth_resp_msg.t = AUTHENTICATION_FAILED;
+		result = false;
+		goto finally;
+	}
+	LOG_INFO("Salt: salt_string %s\n", salt_string);
+
+	password_and_salt = new char[auth_header_msg.password_length + strlen(salt_string) + 1];
+	strcpy(password_and_salt, (char*)received_password);
+	strcat(password_and_salt, salt_string);
+	LOG_INFO("Salt: password_and_salt %s\n", password_and_salt);
+
+	// compute SHA256 password+salt hash
+	if(!compute_SHA256(password_and_salt, strlen(password_and_salt), hash_result))
+		return false;
 	SHA1hash_to_string(hash_result, hash_hex_result);
-	//printf("Hash: %s\n", hash_hex_result);
+	LOG_INFO("Hash: %s\n", hash_hex_result);
 
 	if(!sqlite_check_password(database, (char*)received_username, hash_hex_result))
 	{
 		LOG_ERROR("error: login failed!\n");
 		auth_resp_msg.t = AUTHENTICATION_FAILED;
 		result = false;
+		goto finally;
 	} else {
 		LOG_INFO("Client authentication success!\n");
 		auth_resp_msg.t = AUTHENTICATION_OK;
 		result = true;
+		goto finally;
 	}
 
+finally:
 	send_data(cl_sd, (unsigned char*)&auth_resp_msg, sizeof(auth_resp_msg));
 
 	unsigned char *hashmac_result = NULL;
