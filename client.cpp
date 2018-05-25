@@ -354,6 +354,7 @@ bool receive_file_response(int sd, const char filename[])
 		unsigned char* chunk_plaintext;
 		sc.decrypt(chunk_cipher.buf, chunk_cipherlen);
 		unsigned int chunk_plainlen = sc.flush_plaintext(&chunk_plaintext);
+		unsigned char* original_chunk_plaintext = chunk_plaintext;
 
 		// if first chunk, nonce must be extracted and verified
 		if(i == 0)
@@ -398,10 +399,7 @@ bool receive_file_response(int sd, const char filename[])
 			delete[] padding_plaintext;
 		}
 
-		if(i == 0)
-			delete[] (chunk_plaintext - sizeof(uint64_t));
-		else
-			delete[] chunk_plaintext;
+		delete[] original_chunk_plaintext;
 	}
 
 	// getting from client HMAC_Ksess{seqnum|command_str}_Ksess
