@@ -130,12 +130,16 @@ int recv_data(int sockt, my_buffer* my_buff)
 	}
 	clear_my_buffer(my_buff);
 
-	received = recv(sockt, my_buff->buf, nbytes, 0);
+	unsigned int total_received = 0;
+	while( total_received != nbytes )
+	{
+		received = recv(sockt, my_buff->buf + total_received, nbytes - total_received, 0);
+		if(received == 0)
+			return -1;
+		total_received += received;
+	}
 
-	if( received != nbytes )
-		return -1;
-
-	return received;
+	return total_received;
 }
 
 void clear_my_buffer( my_buffer *myb )

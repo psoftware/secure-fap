@@ -339,7 +339,12 @@ bool receive_file_response(int sd, const char filename[])
 	for(unsigned int i=0; i < s_msg.chunk_number; i++)
 	{
 		// get chunk from tcp socket
-		unsigned int chunk_cipherlen = recv_data(sd, &chunk_cipher);
+		int chunk_cipherlen = recv_data(sd, &chunk_cipher);
+		if(chunk_cipherlen < 0)
+		{
+			LOG_ERROR("receive_file_response: cannot recv chunk_cipher\n");
+			return false;
+		}
 		LOG_DEBUG("decrypting chunk(%d) of %d ciphertext bytes\n", i, chunk_cipherlen);
 
 		// hash partial encrypted text
@@ -349,12 +354,16 @@ bool receive_file_response(int sd, const char filename[])
 		unsigned char* chunk_plaintext;
 		sc.decrypt(chunk_cipher.buf, chunk_cipherlen);
 		unsigned int chunk_plainlen = sc.flush_plaintext(&chunk_plaintext);
+		unsigned char* original_chunk_plaintext = chunk_plaintext;
 
 		// if first chunk, nonce must be extracted and verified
 		if(i == 0)
 		{
-			if(chunk_cipherlen < sizeof(uint64_t))
+			if(chunk_cipherlen < (int)sizeof(uint64_t))
+			{
+				LOG_ERROR("receive_file_response: cannot recv sequence number\n");
 				return false;
+			}
 
 			uint64_t received_seqno;
 			memcpy((void*)&received_seqno, chunk_plaintext, sizeof(uint64_t));
@@ -390,10 +399,7 @@ bool receive_file_response(int sd, const char filename[])
 			delete[] padding_plaintext;
 		}
 
-		if(i == 0)
-			delete[] (chunk_plaintext - sizeof(uint64_t));
-		else
-			delete[] chunk_plaintext;
+		delete[] original_chunk_plaintext;
 	}
 
 	// getting from client HMAC_Ksess{seqnum|command_str}_Ksess
