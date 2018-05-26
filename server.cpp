@@ -332,6 +332,7 @@ finally:
 	delete[] auth_iv;
 	delete[] auth_plaintext;
 	delete[] hashmac_result;
+	delete[] auth_encrypted_key;
 
 	return result;
 }
@@ -368,6 +369,7 @@ bool receive_command(int cl_sd, unsigned char **received_command, unsigned int* 
 	if(CRYPTO_memcmp(computed_hmac, command_hmac, HMAC_LENGTH) != 0)
 	{
 		LOG_INFO("HMAC authentication failed!\n");
+		delete[] command_iv;
 		return false;
 	}
 
@@ -391,6 +393,7 @@ bool receive_command(int cl_sd, unsigned char **received_command, unsigned int* 
 	if(received_seqno != v_sess[session_no]->sr_seq_num)
 	{
 		LOG_ERROR("Invalid sequence number! (%lu != %lu)\n", received_seqno, v_sess[session_no]->sr_seq_num);
+		delete[] command_iv;
 		return false;
 	}
 
@@ -404,6 +407,7 @@ bool receive_command(int cl_sd, unsigned char **received_command, unsigned int* 
 
 	//printf("Received command: %s\n", command_text);
 	LOG_DEBUG("Received command. command_text_len:%d\n", command_text_len);
+	delete[] command_iv;
 	return true;
 }
 
@@ -439,6 +443,7 @@ bool send_str_response(int sd, char data_response[], unsigned int data_response_
 	// increment server sequence number
 	v_sess[session_no]->cl_seq_num++;
 
+	delete[] data_resp_iv;
 	return true;
 }
 
@@ -630,6 +635,7 @@ int handler_fun(int cl_sd, unsigned session_no){
 				LOG_ERROR("[%u] Client quits\n", session_no);
 				break;
 			}
+			delete[] received_command;
 		}
 	} catch (net_exception& e) {
 		LOG_ERROR("[%u] Catched net_exception: %s\n", session_no, e.getMessage().c_str());
