@@ -66,15 +66,14 @@
 \[\textnormal{M7: Server} \rightarrow \textnormal{Client} \lbrace RESP,n\textsubscript{c+1} \rbrace \textsubscript{K\textsubscript{sess}}\]
 
 \paragraph{Proof}\mbox{} \\
+
 \par In message 3 the client receives the two nonces encrypted with server's private key. If we apply the Message Meaning Rule (1st postulate) we derive
 \[ \frac{\textnormal{C} \believes \pubkey{K\textsubscript{publ}} \textnormal{S}, 	\textnormal{C} \sees \lbrace n_c,n_s \rbrace \textsubscript{K\textsubscript{priv}}}
         {\textnormal{C} \believes \textnormal{S} \oncesaid (n_c,n_s)}  \]
-
 By applying the Nonce Verification Rule (2nd postulate) we derive
 \[ \frac{\textnormal{C} \believes \fresh{n_c}, \textnormal{C} \believes \textnormal{S} \oncesaid (n_s,n_c)}{\textnormal{C} \believes (n_c,n_s)} \]
 
 \[ \frac{\textnormal{C} \believes (n_c,n_s)}{\textnormal{C} \believes n_c, \textnormal{C} \believes n_s} \]
-
 So after message 3 the client knows the server nonce generated in this instance of protocol. In the message 4 the client sends the K\textsubscript{sess}, and authenticates to the Server. Client and Server have a preshared secret wich is the Password linked to Username. We apply the Message Meaning Rule (1st postulate) to M4.
 \[ \frac{\textnormal{S} \believes \textnormal{C} \secret{passw} \textnormal{S}, \textnormal{S} \sees \combine{n_s,K\textsubscript{sess},K\textsubscript{mac},Username}{passw}}{\textnormal{S}\believes \textnormal{C} \oncesaid (n_s,K\textsubscript{sess},K\textsubscript{mac},Username)} \]
 Now we apply the Nonce Verification Rule (2nd postulate) to that message.
@@ -85,3 +84,15 @@ The Server believes that Client believes in the session key. Now we apply the Ju
         {\textnormal{S} \believes (K\textsubscript{sess},K\textsubscript{mac}) } \]
 Now the Server and the Client believe that session key and mac key has been generated in this execution of the protocol. We have proven that
 \[ (\textnormal{S} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}) \wedge (\textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}) \]
+Now the session keys are established. In the idealized protocol we assumed that the client typed the correct password so the message 5 is AUTHENTICATION OK. It is necessary to proof that commands have been generated in this execution of the protocol by analyzing message 6.
+\[ \frac{\textnormal{S} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}, \textnormal{S} \sees \lbrace CMD, n\textsubscript{s+1} \rbrace \textsubscript{K\textsubscript{sess}} }{ \textnormal{S} \believes \textnormal{C} \oncesaid (CMD,n\textsubscript{s+1}) }\]
+
+\[ \frac{ \textnormal{S} \believes \fresh{n\textsubscript{s+1}}, \textnormal{S} \believes \textnormal{C} \oncesaid (CMD,n\textsubscript{s+1}) } 
+        {\textnormal{S} \believes \textnormal{C} \believes (CMD,n\textsubscript{s+1})}\]
+Let's analyze the Message 7 to prove that also the Respond Message has been produced in this execution of the protocol.
+
+\[ \frac{\textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}, \textnormal{C} \sees \lbrace RESP, n\textsubscript{c+1} \rbrace \textsubscript{K\textsubscript{sess}}}{ \textnormal{C} \believes \textnormal{S} \oncesaid (RESP,n\textsubscript{c+1})} 
+\]
+
+\[ \frac{\textnormal{C} \believes \textnormal{C} \sharekey{sess } \textnormal{S}, \textnormal{C} \sees \lbrace RESP,n\textsubscript{c+1} \rbrace \textsubscript{K\textsubscript{sess}} }{\textnormal{C} \believes \textnormal{S} \believes (RESP,n\textsubscript{c+1})}
+\]
