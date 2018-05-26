@@ -9,7 +9,7 @@ int open_tcp_server(uint16_t port)
 
 	ret = socket(AF_INET, SOCK_STREAM, 0);
 	if( ret == -1 ) {
-		printf("Impossibile aprire socket");
+		perror("Cannot open socket for the server");
 		return -1;
 	}
 	sock = ret;
@@ -22,7 +22,7 @@ int open_tcp_server(uint16_t port)
 	ret = bind(sock, (struct sockaddr*)&my_addr, sizeof(struct sockaddr_in));
 	if( ret == -1 )
 	{
-		perror("Bind fallita\n");
+		perror("Bind failed");
 		close(sock);
 		return -1;
 	}
@@ -52,7 +52,7 @@ int start_tcp_connection(const char* ip_str, uint16_t port)
 	// effettuo la connect al server indicato
 	if(connect(sock_client, (struct sockaddr *)&srv_addr, sizeof(srv_addr)) == -1)
 	{
-		perror("Connect fallita");
+		perror("Connect failed");
 		return -1;
 	}
 
@@ -89,10 +89,6 @@ int send_data( int sockt, unsigned char* buf, uint32_t buf_len )
 
      /*invia quanti byte contiene il messaggio(formato big endian)*/
 	bsend = send(sockt, (void*)&nbytes, 4, 0);
-      
-	#ifdef DEBUG_NET_WRAPPER	
-//	logg2 << "pacchetto nbytes mandati " << std::dec << (uint32_t)bsend << " B e vale " << std::dec << (uint32_t)len_nbytes;
-	#endif
 
 	if( bsend < 4 )  
 	{
