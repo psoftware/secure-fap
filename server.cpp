@@ -635,6 +635,7 @@ int handler_fun(int cl_sd, unsigned session_no){
 				LOG_ERROR("[%u] Client quits\n", session_no);
 				break;
 			}
+			delete[] received_command;
 		}
 	} catch (net_exception& e) {
 		LOG_ERROR("[%u] Catched net_exception: %s\n", session_no, e.getMessage().c_str());
