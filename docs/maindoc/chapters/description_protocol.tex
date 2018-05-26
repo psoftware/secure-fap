@@ -1,6 +1,6 @@
 \chapter{Description of the protocol}
 \section{Introduction}
-   The protocol developed in this project has been designed to garantee secrecy, integrity and authentication. It is used by a simple client-server application wich allows clients to download files stored inside the server. \\
+   The protocol developed in this project has been designed to garantee secrecy, integrity and authentication. \\
    The overall protocol is based on public encrypt. Infact we suppose that the client already has the public key of the server stored on
    its filesystem. The public encryption scheme allows to authenticate the server. It also allows to exchange a secret master key wich is used by symmetric ciphers to encrpyt the following communications. It is also used an HMAC to garantee integrity and nonces to garantee freshness of communications.
 \section{Sequence Diagram}
@@ -17,7 +17,7 @@
 	\mess{sr}{\small7) \(\lbrace\)Response,n\textsubscript{c+1}\(\rbrace\)\textsubscript{K\textsubscript{sess}},HMAC\textsubscript{K\textsubscript{mac}}(\(\lbrace\)Response,n\textsubscript{c+1}\(\rbrace\)\textsubscript{K\textsubscript{sess}})}{cl}
 \end{sequencediagram}
 
-\section{BAN Logic}
+%\section{BAN Logic}
 \newcommand{\believes}{\mid\equiv}
 \newcommand{\sees}{\triangleleft}
 \newcommand{\oncesaid}{\mid\sim}
@@ -29,16 +29,16 @@
 \newcommand{\pubkey}[1]{\xmapsto{#1}}
 \newcommand{\secret}[1]{\xleftrightharpoons{#1}}
 
-\[A \believes B \]
-\[A \sees B \]
-\[A \oncesaid B \]
-\[A \controls B \]
-\[\fresh{X}\]
-\[\combine{X}{Y}\]
-\[\encrypt{X}{Y}\]
-\[A \sharekey{k} B \]
-\[\pubkey{k} B\]
-\[A \secret{k} B\]
+%\[A \believes B \]
+%\[A \sees B \]
+%\[A \oncesaid B \]
+%\[A \controls B \]
+%\[\fresh{X}\]
+%\[\combine{X}{Y}\]
+%\[\encrypt{X}{Y}\]
+%\[A \sharekey{k} B \]
+%\[\pubkey{k} B\]
+%\[A \secret{k} B\]
 
 \section{Formal Description}
 \paragraph{Ipothesis}
@@ -96,3 +96,4 @@ Let's analyze the Message 7 to prove that also the Respond Message has been prod
 
 \[ \frac{\textnormal{C} \believes \textnormal{C} \sharekey{sess } \textnormal{S}, \textnormal{C} \sees \lbrace RESP,n\textsubscript{c+1} \rbrace \textsubscript{K\textsubscript{sess}} }{\textnormal{C} \believes \textnormal{S} \believes (RESP,n\textsubscript{c+1})}
 \]
+Note that nonces are updated on every exchange of CMD and RESP message to avoid the possibility of reply attack.
