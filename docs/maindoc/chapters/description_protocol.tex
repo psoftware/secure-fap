@@ -1,20 +1,25 @@
 \chapter{Description of the protocol}
 \section{Introduction}
-   The protocol developed in this project has been designed to garantee secrecy, integrity and authentication. \\
-   The overall protocol is based on public encrypt. Infact we suppose that the client already has the public key of the server stored on
-   its filesystem. The public encryption scheme allows to authenticate the server. It also allows to exchange a secret master key wich is used by symmetric ciphers to encrpyt the following communications. It is also used an HMAC to garantee integrity and nonces to garantee freshness of communications.
+   
+   The protocol developed in this project has been designed to garantee secrecy, integrity and authentication for a client-server application. 
+
+   The overall protocol is based on asymmetric encryption. Infact we suppose that the client already has the public key of the server stored on
+   its filesystem. The public encryption scheme allows to authenticate the server. The assumption is that just the server knows the private key so, when the client receives a message signed with private key, it is sure that the server has sent it. But, as we know, the asymmetric encryption is too slow so it is used just at beginning to exchange the \textit{session key} and the \textit{mac key}. The first one is used by symmetric cipher to garantee secrecy of communication, the second one is used to garantee integrity. The client is authenticated by application with a login, after the \textit{key exchange} so we assume that client and the server also share a secret quantity wich is the \textit{password}.
 \section{Sequence Diagram}
+\par In this paragraph we will see the sequence diagram.
 \begin{sequencediagram}
 	\def\unitfactor{1}
-	\newinst[0]{cl}{:Client}
-	\newinst[11]{sr}{:Server}
-	\mess{cl}{\small1) ClientHello,n\textsubscript{c}}{sr}
-	\mess{sr}{\small2) ServerHello,n\textsubscript{s}}{cl}
-	\mess{sr}{\small3) \(\lbrace\)n\textsubscript{c},n\textsubscript{s}\(\rbrace\)\textsubscript{K\textsubscript{priv}}}{cl}
-	\mess{cl}{\small4) \(\lbrace\)n\textsubscript{s},K\textsubscript{sess},K\textsubscript{mac},Username,Password\(\rbrace\)\textsubscript{K\textsubscript{publ}}}{sr}
-	\mess{sr}{\small5) Authentication OK,HMAC\textsubscript{K\textsubscript{mac}}(Authentication OK)}{cl}
-	\mess{cl}{\small6) \(\lbrace\)Command,n\textsubscript{s+1}\(\rbrace\)\textsubscript{K\textsubscript{sess}}, HMAC\textsubscript{K\textsubscript{mac}}(\(\lbrace\)Command,n\textsubscript{s+1}\(\rbrace\)\textsubscript{K\textsubscript{sess}})}{sr}
-	\mess{sr}{\small7) \(\lbrace\)Response,n\textsubscript{c+1}\(\rbrace\)\textsubscript{K\textsubscript{sess}},HMAC\textsubscript{K\textsubscript{mac}}(\(\lbrace\)Response,n\textsubscript{c+1}\(\rbrace\)\textsubscript{K\textsubscript{sess}})}{cl}
+	\newinst[0]{cl}{Client}
+	\newinst[11]{sr}{Server}
+	\mess{cl}{\small1) ClientHello || n\textsubscript{c}}{sr}
+	\mess{sr}{\small2) ServerHello || n\textsubscript{s}}{cl}
+	\mess{sr}{\small3) E(K\textsubscript{priv}, n\textsubscript{c} || n\textsubscript{s})}{cl}
+	\mess{cl}{\small4) E(K\textsubscript{publ}, n\textsubscript{s} || K\textsubscript{sess} || K\textsubscript{mac} || Username || Password)}{sr}
+	\mess{sr}{\small5) Authentication OK || HMAC\textsubscript{K\textsubscript{mac}}(Authentication OK)}{cl}
+	\mess{cl}{\small6) E(K\textsubscript{sess}, Command || n\textsubscript{s+1}) || 
+
+	HMAC\textsubscript{K\textsubscript{mac}}(E(K\textsubscript{sess}, Command || n\textsubscript{s+1}))	}{sr}
+	\mess{sr}{\small7) E(K\textsubscript{sess}, Response || n\textsubscript{c+1}) || HMAC\textsubscript{K\textsubscript{mac}}(E(K\textsubscript{sess}, Response || n\textsubscript{c+1})}{cl}
 \end{sequencediagram}
 
 %\section{BAN Logic}
