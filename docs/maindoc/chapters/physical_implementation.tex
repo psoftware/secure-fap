@@ -1,3 +1,57 @@
 \chapter{Physical Implementation}
 \section{Brief description}
-\par The protocol was implemented in a client-server application written in C++14. At beginning the client logs to the server by sending the user and the password typed by the user. Then, if the authentication goes right, it can download the files stored in its own directory inside the server. To implement the protocol we used the feuatures provided by OpenSSL library, wich allows us to generate good pseudo-rando numbers, to encrypt files through symmetric encription, and to sign messages through public-key encryption. The OpenSSL library is written in C so we defined some wrapper classes in order to semplify the use of it. We also used some wrappers in order to semplify the communication between client and server.
+\par The protocol was implemented in a client-server application written in C++14. At beginning the client logs to the server by sending the user and the password typed by the user. Then, if the authentication goes right, it can download the files stored in its own directory inside the server. To implement the protocol we used some features provided by OpenSSL library, witch allows us to:
+\begin{itemize}
+	\item use secure pseudo-random generators
+	\item encrypt files through symmetric encription
+	\item sign messages through public-key encryption.
+\end{itemize}
+The OpenSSL library is written in C so we defined some wrappers in order to use classes instead of raw functions and variables. Those wrappers also helps with memory allocation and memory faults management.
+In this project we have also chosen to use SQLite3 DBMS to store client usernames and passwords, due to its simplicity and due to storing database as file, without the need of a server.
+
+\section{Secure Programming}
+\paragraph{Heap allocation}
+To better manage memory allocation issues, \textbf{new} is used instead of \textit{malloc(sizeof(...))}. malloc returns NULL if variable cannot be allocated, and if this behavior is not handled, it could lead to security issues. However the new operator throws an \textit{exception} if something goes wrong: if this exception is not cached, the program just closes.
+
+\paragraph{Secure Memory Erasing}
+C++ has no built-in memory secure erasing routines. Freed Memory used for stack, static or heap variables is not zeroed. This potentially means that password, session keys and other sensible data could be stolen using other processes (which can be affected by buffer overflow issues). A simple \textit{memset(var, 0, size)} can be the solution, however compiler optimizations could ignore this function call if the variable is deleted immediately after.
+\begin{lstlisting}
+int *array = new int[10];
+[...]
+memset(array, 0, 10); // <- This is ignored
+delete free;
+\end{lstlisting}
+To solve this problem a custom securing function must be implemented. One method is to tell the compiler to not optimize part of code using the \textit{volatile} keyword: every operation done on \textit{volatile} variables will not be optimized.
+\\
+This is our solution (which can be found in \textit{commonlib/commonlib.cpp} source):
+\begin{lstlisting}
+void secure_zero(void *s, size_t n)
+{
+	volatile char *p = (char*)s;
+	while (n--) *p++ = 0;
+}
+\end{lstlisting}
+
+% exceptions
+% unsigned
+
+\section{Server-side Reliability}
+\subsection{SQL Injection Protection}
+As with every other sql DBMS, precautions must be taken on building queries to execute: in particular we must protect the server from SQL Injection attacks. This type of vulnerabilities could give the adversary the possibility to authenticate themself as a user without inserting any password. SQLite3 library, like other sql connectors, gives the possibility to use \textit{prepared statements} to correctly manage query manipulation: first we must create a new query using \textit{sqlite3\_prepare\_v2()} function, inserting the \textit{?s}, than we can use \textit{sqlite3\_bind\_<variabletype>(index, variable)} to inject all the parameters.
+
+\subsection{Secure Password Storing}
+Server stores long term secrets which must not be stolen. We are talking about usernames and passwords. If an adversary gets access to the server database, then all credentials would be compromised. To solve this problem we must not store password in plaintext, instead we must hash them using a secure hashing function (our choice is \textbf{SHA256}). However this is not sufficient because users very often choose weak passwords (for example too small ones or composed by dictionary terms): the adversary can perform a \textit{dictionary attack} building a dictionary by hashing a list of weak passwords, then it can compare every generated hash to each compromised one. This issue can be solved adding a \textit{salt} to each password before hashing, storing also the choosen salt inside the database. A salt is generated for each username-password pair using a random string generator function. The final database row will be composed like this:
+\\\\\centerline{(username, password, salt)}\\\\
+Salt is just concatenated to password before hashing (this was also done in early Unix versions).\\
+Password checks will be done in this way (using pseudocode):
+\begin{lstlisting}
+bool check_password(username, password) {
+	if(!database_user_exists(username))
+		return false;
+	salt = database_get_salt(username);
+	database_hash = database_get_hash(username, password);
+	computed_hash = SHA256_HASH(password + salt);
+
+	return database_hash == computed_hash;
+}
+\end{lstlisting}
