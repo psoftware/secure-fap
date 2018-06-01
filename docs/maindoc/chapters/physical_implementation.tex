@@ -16,10 +16,10 @@ To better manage memory allocation issues, \textbf{new} is used instead of \text
 \paragraph{Secure Memory Erasing}
 C++ has no built-in memory secure erasing routines. Freed Memory used for stack, static or heap variables is not zeroed. This potentially means that password, session keys and other sensible data could be stolen using other processes (which can be affected by buffer overflow issues). A simple \textit{memset(var, 0, size)} can be the solution, however compiler optimizations could ignore this function call if the variable is deleted immediately after.
 \begin{lstlisting}
-int *array = new int[10];
-[...]
-memset(array, 0, 10); // <- This is ignored
-delete free;
+	int *array = new int[10];
+	[...]
+	memset(array, 0, 10);	// <- This is ignored
+	delete free; 			// <- because of this
 \end{lstlisting}
 To solve this problem a custom securing function must be implemented. One method is to tell the compiler to not optimize part of code using the \textit{volatile} keyword: every operation done on \textit{volatile} variables will not be optimized.
 \\
@@ -37,7 +37,7 @@ void secure_zero(void *s, size_t n)
 
 \section{Server-side Reliability}
 \subsection{SQL Injection Protection}
-As with every other sql DBMS, precautions must be taken on building queries to execute: in particular we must protect the server from SQL Injection attacks. This type of vulnerabilities could give the adversary the possibility to authenticate themself as a user without inserting any password. SQLite3 library, like other sql connectors, gives the possibility to use \textit{prepared statements} to correctly manage query manipulation: first we must create a new query using \textit{sqlite3\_prepare\_v2()} function, inserting the \textit{?s}, than we can use \textit{sqlite3\_bind\_<variabletype>(index, variable)} to inject all the parameters.
+As with every other sql DBMS, precautions must be taken on building queries to execute: in particular we must protect the server from SQL Injection attacks. This type of vulnerabilities could give the adversary the possibility to authenticate itself as a user without inserting any password. SQLite3 library, like other sql connectors, gives the possibility to use \textit{prepared statements} to correctly manage query manipulation: first we must create a new query using \textit{sqlite3\_prepare\_v2()} function, inserting the \textit{?} for each variable to include, than we can use \textit{sqlite3\_bind\_<variabletype>(index, variable)} to inject all the parameters.
 
 \subsection{Secure Password Storing}
 Server stores long term secrets which must not be stolen. We are talking about usernames and passwords. If an adversary gets access to the server database, then all credentials would be compromised. To solve this problem we must not store password in plaintext, instead we must hash them using a secure hashing function (our choice is \textbf{SHA256}). However this is not sufficient because users very often choose weak passwords (for example too small ones or composed by dictionary terms): the adversary can perform a \textit{dictionary attack} building a dictionary by hashing a list of weak passwords, then it can compare every generated hash to each compromised one. This issue can be solved adding a \textit{salt} to each password before hashing, storing also the choosen salt inside the database. A salt is generated for each username-password pair using a random string generator function. The final database row will be composed like this:
