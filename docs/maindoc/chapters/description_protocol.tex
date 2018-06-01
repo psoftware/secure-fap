@@ -96,7 +96,7 @@ By applying the Nonce Verification Rule (2nd postulate) we derive
 So after message 3 the client knows the server nonce generated in this instance of protocol. In the message 4 the client sends the K\textsubscript{sess}, and authenticates to the Server. Client and Server have a preshared secret wich is the Password linked to Username. We apply the Message Meaning Rule (1st postulate) to M4.
 \[ \frac{\textnormal{S} \believes \textnormal{C} \secret{passw} \textnormal{S}, \textnormal{S} \sees \combine{n_s,K\textsubscript{sess},K\textsubscript{mac},Username}{passw}}{\textnormal{S}\believes \textnormal{C} \oncesaid (n_s,K\textsubscript{sess},K\textsubscript{mac},Username)} \]
 Now we apply the Nonce Verification Rule (2nd postulate) to that message.
-\[ \frac{\textnormal{S}\believes \fresh{n_s}, \textnormal{S} \believes \textnormal{C} \oncesaid (n_s,K\textsubscript{sess},,K\textsubscript{mac},Username)}
+\[ \frac{\textnormal{S}\believes \fresh{n_s}, \textnormal{S} \believes \textnormal{C} \oncesaid (n_s,K\textsubscript{sess},K\textsubscript{mac},Username)}
    {\textnormal{S} \believes \textnormal{C} \believes (n_s,K\textsubscript{sess},K\textsubscript{mac},Username)}	\]
 The Server believes that Client believes in the session key. Now we apply the Jurisdiction Rule (3rd postulate) to that message.
 \[ \frac{\textnormal{S} \believes \textnormal{C} \believes (K\textsubscript{sess},K\textsubscript{mac}), \textnormal{S} \believes \textnormal{C} \controls (K\textsubscript{sess},K\textsubscript{mac})}
@@ -129,7 +129,7 @@ Let's analyze the Message 7 to prove that also the Respond Message has been prod
 \[ \frac{\textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}, \textnormal{C} \sees \lbrace RESP, n\textsubscript{c+1} \rbrace \textsubscript{K\textsubscript{sess}}}{ \textnormal{C} \believes \textnormal{S} \oncesaid (RESP,n\textsubscript{c+1})} 
 \]
 
-\[ \frac{\textnormal{C} \believes \textnormal{C} \sharekey{sess } \textnormal{S}, \textnormal{C} \sees \lbrace RESP,n\textsubscript{c+1} \rbrace \textsubscript{K\textsubscript{sess}} }{\textnormal{C} \believes \textnormal{S} \believes (RESP,n\textsubscript{c+1})}
+\[ \frac{\textnormal{C} \believes \textnormal{C} \sharekey{sess } \textnormal{S}, \textnormal{C} \believes \textnormal{S} \oncesaid (RESP,n\textsubscript{c+1}) }{\textnormal{C} \believes \textnormal{S} \believes (RESP,n\textsubscript{c+1})}
 \]
 After the exchange of messages 6 and 7 we have proven that:
 \begin{itemize}
