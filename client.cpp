@@ -166,33 +166,71 @@ bool wait_for_authentication_response(int sd)
 {
 	bool result = false;
 	simple_msg auth_response_msg;
-	recv_data(sd, &my_buff);
-	memcpy(&auth_response_msg, my_buff.buf, sizeof(auth_response_msg));
 
-	unsigned int command_hmac_len = recv_data(sd, &my_buff);
-	unsigned char *command_hmac = new unsigned char[command_hmac_len];
-	memcpy(command_hmac, my_buff.buf, command_hmac_len);
+	// getting iv
+	unsigned char *resp_iv = new unsigned char[EVP_CIPHER_iv_length(EVP_aes_128_cbc())];
+	unsigned int resp_iv_len = recv_data(sd, &my_buff);
+	memcpy(resp_iv, my_buff.buf, resp_iv_len);
 
-	// making HMAC_Ksess{seqnum|command_str}_Ksess
-	unsigned char *computed_hmac;
+	// getting {auth status,clnonce}_Ksess
+	unsigned int resp_cipherlen = recv_data(sd, &my_buff);
+	unsigned char *resp_ciphertext = new unsigned char[resp_cipherlen];
+	memcpy(resp_ciphertext, my_buff.buf, resp_cipherlen);
+
+	// getting HMAC_Ksess{auth status,clnonce}_Ksess
+	unsigned int resp_hmac_len = recv_data(sd, &my_buff);
+	unsigned char *resp_hmac = new unsigned char[resp_hmac_len];
+	memcpy(resp_hmac, my_buff.buf, resp_hmac_len);
+
+	// verifying HMAC_Ksess{auth status,clnonce}_Ksess
+	unsigned char *resp_computed_hmac;
 	HMACMaker hm(hmac_key, 16);
-	hm.hash((unsigned char*)&auth_response_msg, sizeof(auth_response_msg));
-	hm.hash_end(&computed_hmac);
+	hm.hash(resp_ciphertext, resp_cipherlen);
+	hm.hash_end(&resp_computed_hmac);
 
-	if(CRYPTO_memcmp(computed_hmac, command_hmac, HMAC_LENGTH) != 0)
+	if(CRYPTO_memcmp(resp_computed_hmac, resp_hmac, HMAC_LENGTH) != 0)
 	{
-		printf("--MESSAGE AUTHENTICATION CORRUPTED!\n");
-		result = false;
+		LOG_ERROR("Authentication Response HMAC verification failed!\n");
+		return false;
+	}
+
+	// decipher
+	SymmetricCipher sc(EVP_aes_128_cbc(), session_key, resp_iv);
+	sc.decrypt(resp_ciphertext, resp_cipherlen);
+	sc.decrypt_end();
+
+	unsigned char* resp_plaintext;
+	unsigned int resp_plainlen = sc.flush_plaintext(&resp_plaintext);
+
+	// security check
+	if(resp_plainlen < sizeof(auth_response_msg) + sizeof(uint64_t))
+		return false;
+
+	// extracting things
+	unsigned int resp_plaintext_offset = 0;
+
+	// auth status
+	memcpy(&auth_response_msg, resp_plaintext, sizeof(auth_response_msg));
+	resp_plaintext_offset += sizeof(auth_response_msg);
+	// received cl_nonce
+	uint64_t verification_cl_nonce;
+	memcpy(&verification_cl_nonce, resp_plaintext + resp_plaintext_offset, sizeof(uint64_t));
+	resp_plaintext_offset += sizeof(uint64_t);
+
+	if(cl_nonce != verification_cl_nonce)
+	{
+		LOG_ERROR("Authentication Response Client nonce verification failed! (%lu, %lu)\n", cl_nonce, verification_cl_nonce);
+		return false;
 	}
 
 	if(auth_response_msg.t == AUTHENTICATION_FAILED )
 	{
-		printf("Authentication Failed!\n");
+		LOG_ERROR("Authentication Failed!\n");
 		result = false;
 	} else
 		result = true;
 
-	delete[] computed_hmac;
+	delete[] resp_computed_hmac;
 
 	return result;
 }

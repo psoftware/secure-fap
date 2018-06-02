@@ -308,17 +308,36 @@ bool check_client_identity(int cl_sd, unsigned session_no)
 	}
 
 finally:
-	send_data(cl_sd, (unsigned char*)&auth_resp_msg, sizeof(auth_resp_msg));
+	// {auth status,clnonce}_Ksess
+	LOG_DEBUG("check_client_identity: sending auth = %d, client_nonce = %lu\n", auth_resp_msg.t == AUTHENTICATION_OK, v_sess[session_no]->cl_nonce);
+	// generate and send iv
+	unsigned char *msg_resp_iv = new unsigned char[EVP_CIPHER_iv_length(EVP_aes_128_cbc())];
+	generate_iv(msg_resp_iv);
+	send_data(cl_sd, msg_resp_iv, EVP_CIPHER_iv_length(EVP_aes_128_cbc()));
 
-	unsigned char *hashmac_result = NULL;
-	unsigned int hashmac_len;
+	// we need to compute {seqnum|data_response}_Ksess and hash it
+	SymmetricCipher sc_resp(EVP_aes_128_cbc(), v_sess[session_no]->session_key, msg_resp_iv);
+	// # response message
+	sc_resp.encrypt((unsigned char*)&auth_resp_msg, sizeof(auth_resp_msg));
+	// # clnonce
+	sc_resp.encrypt((unsigned char*)&v_sess[session_no]->cl_nonce, sizeof(uint64_t));
+	sc_resp.encrypt_end();
+
+	unsigned char *resp_ciphertext;
+	unsigned int resp_cipherlen = sc_resp.flush_ciphertext(&resp_ciphertext);
+	send_data(cl_sd, resp_ciphertext, resp_cipherlen);
+
+	// HMAC_Khmac({auth status,clnonce}_Ksess)
+	unsigned char *resp_hash_result;
 
 	HMACMaker hc(v_sess[session_no]->hmac_key, 16);
-	hc.hash((unsigned char*)&auth_resp_msg, sizeof(auth_resp_msg));
-	hashmac_len = hc.hash_end(&hashmac_result);
+	hc.hash(resp_ciphertext, resp_cipherlen);
+	unsigned int resp_hash_len = hc.hash_end(&resp_hash_result);
 
-	// send HMAC_Khmac{ AUTHENTICATION }
-	send_data(cl_sd, hashmac_result, hashmac_len);
+	// send HMAC_Khmac{{auth status,clnonce}_Ksess}
+	send_data(cl_sd, resp_hash_result, resp_hash_len);
+
+	// ######## CLEANING CODE ########
 
 	secure_zero(received_password,auth_header_msg.password_length);
 	if(password_and_salt != NULL)
@@ -331,7 +350,7 @@ finally:
 	delete[] received_username;
 	delete[] auth_iv;
 	delete[] auth_plaintext;
-	delete[] hashmac_result;
+	delete[] resp_hash_result;
 	delete[] auth_encrypted_key;
 
 	return result;
