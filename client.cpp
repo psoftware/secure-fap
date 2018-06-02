@@ -608,6 +608,9 @@ int main(int argc, char **argv)
 	printf("\n");
 
 	close(sd);
+	delete[]  auth_username;
+	secure_zero(auth_secret, strlen(auth_secret));
+	delete[] auth_secret;
 
 	return 0;
 }
