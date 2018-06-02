@@ -52,31 +52,32 @@ In this paragraph we will see the sequence diagram.
 \section{Formal Description}
 \subsection{Ipothesis}
 \begin{itemize}
-\item \(\textnormal{C} \believes \fresh{n_c}\)
-\item \(\textnormal{S} \believes \fresh{n_s}\)
-\item \(\textnormal{C} \believes \textnormal{S} \controls n_s\)
-\item \(\textnormal{S} \believes \textnormal{C} \controls n_c\)
-\item \(\textnormal{C} \believes \pubkey{K\textsubscript{publ}} \textnormal{S}\)
-\item \(\textnormal{S} \believes \textnormal{C} \controls K_{session}\)
-\item \(\textnormal{S} \believes \textnormal{C} \controls \fresh{K_{session}}\)
-\item \(\textnormal{S} \believes \textnormal{C} \secret{password} \textnormal{S}\)
+	\item \(\textnormal{C} \believes \fresh{n_c}\)
+	\item \(\textnormal{S} \believes \fresh{n_s}\)
+	\item \(\textnormal{C} \believes \textnormal{S} \controls n_s\)
+	\item \(\textnormal{S} \believes \textnormal{C} \controls n_c\)
+	\item \(\textnormal{C} \believes \pubkey{K\textsubscript{publ}} \textnormal{S}\)
+	\item \(\textnormal{S} \believes \textnormal{C} \controls K_{sess}\)
+	%\item \(\textnormal{S} \believes \textnormal{C} \controls \fresh{K_{sess}}\)
+	\item \(\textnormal{S} \believes \textnormal{C} \controls K_{mac}\)
+	%\item \(\textnormal{S} \believes \textnormal{C} \controls \fresh{K_{mac}}\)
+	\item \(\textnormal{S} \believes \textnormal{C} \secret{password} \textnormal{S}\)
+	\item \(\textnormal{C} \believes \textnormal{C} \secret{password} \textnormal{S}\)
+	\item \(\textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}\)
+	\item \(\textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}\)
 \end{itemize}
 
 \subsection{Objectives}
 \begin{itemize}
-\item \(\textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}\)
-\item \(\textnormal{S} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}\)
-\item \(\textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}\)
-\item \(\textnormal{S} \believes \textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}\)
-\item \(\textnormal{C} \believes \textnormal{S} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}\)
-\item \(\textnormal{C} \believes \textnormal{S} \believes \textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}\)
-\item \(\textnormal{S} \believes \textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}\)
-\item \(\textnormal{S} \believes \textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}\)
-%\item \(\textnormal{S} \believes \fresh{\textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}}\)
-%\item \(\textnormal{S} \believes \fresh{\textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}}\)
-\item \(\textnormal{C} \believes \textnormal{S}\believes AUTH\:OK\)
-\item \(\textnormal{S} \believes \textnormal{C}\believes CMD\)
-\item \(\textnormal{C} \believes \textnormal{S}\believes RESP\)
+	\item \(\textnormal{S} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}\)	
+	\item \(\textnormal{S} \believes \textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}\)
+	\item \(\textnormal{S} \believes \textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}\)
+	\item \(\textnormal{S} \believes \textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}\)
+	\item \(\textnormal{C} \believes \textnormal{S} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}\)
+	\item \(\textnormal{C} \believes \textnormal{S} \believes \textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}\)
+	\item \(\textnormal{C} \believes \textnormal{S}\believes AUTH\:OK\)
+	\item \(\textnormal{S} \believes \textnormal{C}\believes CMD\)
+	\item \(\textnormal{C} \believes \textnormal{S}\believes RESP\)
 \end{itemize}
 
 \subsection{Idealized Protocol}
@@ -89,54 +90,56 @@ In this paragraph we will see the sequence diagram.
 \end{itemize}
 
 \subsection{Proof}
-In message 3 the client receives the two nonces encrypted with server's private key. If we apply the Message Meaning Rule (1st postulate) we derive
+In message 3 the client receives the two nonces encrypted with server's private key. If we apply the \textit{message meaning rule} we derive
 \[ \frac{\textnormal{C} \believes \pubkey{K\textsubscript{publ}} \textnormal{S}, \textnormal{C} \sees \encrypt{n_c,n_s}{K\textsubscript{priv}}}
         {\textnormal{C} \believes \textnormal{S} \oncesaid (n_c,n_s)}\]
-By applying the Nonce Verification Rule (2nd postulate) we derive
+By applying the \textit{nonce verification rule} we derive
 \[ \frac{\textnormal{C} \believes \fresh{n_c}, \textnormal{C} \believes \textnormal{S} \oncesaid (n_s,n_c)}{\textnormal{C} \believes (n_c,n_s)}\]
-
-\[ \frac{\textnormal{C} \believes (n_c,n_s)}{\textnormal{C} \believes n_c, \textnormal{C} \believes n_s}\]
-So after message 3 the client knows the server nonce generated in this instance of protocol. In the message 4 the client sends the K\textsubscript{sess}, and authenticates to the Server. Client and Server have a preshared secret wich is the Password linked to Username. We apply the Message Meaning Rule (1st postulate) to M4.
+So after message 3 the client knows the server nonce generated in this instance of protocol. In the message 4 the client sends the K\textsubscript{sess}, and authenticates to the Server. Client and Server have a preshared secret wich is the Password linked to Username. We apply the \textit{message meaning rule} to M4.
 \[ \frac{\textnormal{S} \believes \textnormal{C} \secret{passw} \textnormal{S}, \textnormal{S} \sees \combine{n_s,\textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S},\textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S},Username}{passw}}{\textnormal{S}\believes \textnormal{C} \oncesaid (n_s,\textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{S},\textnormal{Client} \sharekey{K\textsubscript{mac }} \textnormal{S},Username)} \]
-Now we apply the Nonce Verification Rule (2nd postulate) to that message.
+And then we apply the \textit{nonce verification rule} to M4.
 \[ \frac{\textnormal{S}\believes \fresh{n_s}, \textnormal{S} \believes \textnormal{C} \oncesaid (n_s,\textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S},\textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S},Username)}
    {\textnormal{S} \believes \textnormal{C} \believes (n_s,\textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S},\textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S},Username)}	\]
-The Server believes that Client believes in the session key. Now we apply the Jurisdiction Rule (3rd postulate) to that message.
+The Server believes that Client believes in the session key. The server trusts the client in the generation of keys, so we can apply the \textit{jurisdiction rule} to M4.
 \[ \frac{\textnormal{S} \believes \textnormal{C} \believes (\textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S},\textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}), \textnormal{S} \believes \textnormal{C} \controls (K\textsubscript{sess},K\textsubscript{mac})}
         {\textnormal{S} \believes (\textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S},\textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}) } \]
 Now the Server and the Client believe that session key and mac key has been generated in this execution of the protocol. We have proven that
 \begin{itemize}
 	\item \(\textnormal{S} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}\)
-	\item \(\textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}\)
 	\item \(\textnormal{S} \believes \textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}\)
-	\item \(\textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}\) 
 	\item \(\textnormal{S} \believes \textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}\)
 	\item \(\textnormal{S} \believes \textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}\)
 \end{itemize}
-Now the session keys are established. In the idealized protocol we assumed that the client typed the correct password so the message 5 is AUTHENTICATION OK. It is send in plain text but the message 5 also contains the hash-mac of the message. We can apply the message meaning rule.
+Now the session keys are established. In the idealized protocol we assumed that the client typed the correct password, so the message 5 is AUTHENTICATION OK. We can apply the \textit{message meaning rule}.
 \[
-	\frac{\textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}, \textnormal{C} \sees \encrypt{AUTH\:OK}{K\textsubscript{mac}}}
-	{\textnormal{C} \believes \textnormal{S} \oncesaid {AUTH\:OK}} 
+	\frac{\textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}, \textnormal{C} \sees \encrypt{(n_c,AUTH\:OK,\textnormal{C}\sharekey{K\textsubscript{sess }}\textnormal{S},\textnormal{C}\sharekey{K\textsubscript{mac }}\textnormal{S})}{K\textsubscript{sess}}}
+	{\textnormal{C} \believes \textnormal{S} \oncesaid {(n_c,AUTH\:OK,\textnormal{C}\sharekey{K\textsubscript{sess }}\textnormal{S},\textnormal{C}\sharekey{K\textsubscript{mac }}\textnormal{S})}} 
 \]
-And by freshness of \(K\textsubscript{mac}\) we can derive that the message 5 has been generated in this execution of the protocol. 
+We can apply the \textit{nonce verification rule}.
+\[
+	\frac{\textnormal{C} \believes \fresh{n_c}, \textnormal{C} \believes \textnormal{S} \oncesaid{(n_c,AUTH\:OK,\textnormal{C}\sharekey{K\textsubscript{sess }}\textnormal{S},\textnormal{C}\sharekey{K\textsubscript{mac }}\textnormal{S})}}
+	{\textnormal{C} \believes \textnormal{S} \believes {(n_c,AUTH\:OK,\textnormal{C}\sharekey{K\textsubscript{sess }}\textnormal{S},\textnormal{C}\sharekey{K\textsubscript{mac }}\textnormal{S})}} 
+\]
 \begin{itemize}
-	\item $\textnormal{Client} \believes \textnormal{Server}\believes AUTH\:OK$
+	\item \(\textnormal{C} \believes \textnormal{S} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}\)
+	\item \(\textnormal{C} \believes \textnormal{S} \believes \textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}\)
+	\item \(\textnormal{C} \believes \textnormal{S}\believes AUTH\:OK\)
 \end{itemize}
-It is also necessary to proof that commands have been generated in this execution of the protocol.
+It is also necessary to proof that commands have been generated in this execution of the protocol. We apply the \textit{message meaning rule} and then the \textit{nonce verification rule}.
 \[ \frac{\textnormal{S} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}, \textnormal{S} \sees \lbrace CMD, n\textsubscript{s+1} \rbrace \textsubscript{K\textsubscript{sess}} }{ \textnormal{S} \believes \textnormal{C} \oncesaid (CMD,n\textsubscript{s+1}) }\]
 
 \[ \frac{ \textnormal{S} \believes \fresh{n\textsubscript{s+1}}, \textnormal{S} \believes \textnormal{C} \oncesaid (CMD,n\textsubscript{s+1}) } 
         {\textnormal{S} \believes \textnormal{C} \believes (CMD,n\textsubscript{s+1})}\]
 Let's analyze the Message 7 to prove that also the Respond Message has been produced in this execution of the protocol.
 
-\[ \frac{\textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}, \textnormal{C} \sees \lbrace RESP, n\textsubscript{c+1} \rbrace \textsubscript{K\textsubscript{sess}}}{ \textnormal{C} \believes \textnormal{S} \oncesaid (RESP,n\textsubscript{c+1})} 
+\[ \frac{\textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}, \textnormal{C} \sees \lbrace RESP, n\textsubscript{c+1} \rbrace \textsubscript{K\textsubscript{sess}}}{ \textnormal{C} \believes \textnormal{S} \oncesaid (n\textsubscript{c+1},RESP)} 
 \]
 
-\[ \frac{\textnormal{C} \believes \textnormal{C} \sharekey{sess } \textnormal{S}, \textnormal{C} \believes \textnormal{S} \oncesaid (RESP,n\textsubscript{c+1}) }{\textnormal{C} \believes \textnormal{S} \believes (RESP,n\textsubscript{c+1})}
+\[ \frac{\textnormal{C} \believes \fresh{n\textsubscript{c+1}}, \textnormal{C} \believes \textnormal{S} \oncesaid (n\textsubscript{c+1},RESP) }{\textnormal{C} \believes \textnormal{S} \believes (n\textsubscript{c+1},RESP)}
 \]
 After the exchange of messages 6 and 7 we have proven that:
 \begin{itemize}
 	\item \( \textnormal{S} \believes \textnormal{C} \believes CMD\)
 	\item \( \textnormal{C} \believes \textnormal{S} \believes RESP\)
 \end{itemize}
-Note that nonces are updated on every exchange of CMD and RESP message to avoid the possibility of reply attack. Furthermore note that in the real protocol the hash-mac is used also in messages 6 and 7 just to check integrity of messages. However it does not add anything more in the description of formal protocol so it was ignored it these messages.
+Note that nonces are updated on every exchange of CMD and RESP message to avoid the possibility of reply attack. Furthermore note that in the real protocol the hash-mac is used in messages 5, 6 and 7 just to check integrity of messages. However it does not add anything more in the description of formal protocol so it was ignored it these messages.
