@@ -52,37 +52,40 @@ In this paragraph we will see the sequence diagram.
 \section{Formal Description}
 \subsection{Ipothesis}
 \begin{itemize}
-\item \(\textnormal{Client} \believes \fresh{n_c}\)
-\item \(\textnormal{Server} \believes \fresh{n_s}\)
-\item \(\textnormal{Client} \believes \textnormal{Server} \controls n_s\)
-\item \(\textnormal{Server} \believes \textnormal{Client} \controls n_c\)
-\item \(\textnormal{Client} \believes \pubkey{K\textsubscript{publ}} \textnormal{Server}\)
-\item \(\textnormal{Server} \believes \textnormal{Client} \controls K_{session}\)
-\item \(\textnormal{Server} \believes \textnormal{Client} \secret{password} \textnormal{Server}\)
+\item \(\textnormal{C} \believes \fresh{n_c}\)
+\item \(\textnormal{S} \believes \fresh{n_s}\)
+\item \(\textnormal{C} \believes \textnormal{S} \controls n_s\)
+\item \(\textnormal{S} \believes \textnormal{C} \controls n_c\)
+\item \(\textnormal{C} \believes \pubkey{K\textsubscript{publ}} \textnormal{S}\)
+\item \(\textnormal{S} \believes \textnormal{C} \controls K_{session}\)
+\item \(\textnormal{S} \believes \textnormal{C} \controls \fresh{K_{session}}\)
+\item \(\textnormal{S} \believes \textnormal{C} \secret{password} \textnormal{S}\)
 \end{itemize}
 
 \subsection{Objectives}
 \begin{itemize}
-\item \(\textnormal{Client} \believes \textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{Server}\)
-\item \(\textnormal{Server} \believes \textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{Server}\)
-\item \(\textnormal{Client} \believes \textnormal{Client} \sharekey{K\textsubscript{mac }} \textnormal{Server}\)
-\item \(\textnormal{Server} \believes \textnormal{Client} \sharekey{K\textsubscript{mac }} \textnormal{Server}\)
-%\[\textnormal{Client} \believes \textnormal{Server} \believes \textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{Server}\]
-%\[\textnormal{Server} \believes \textnormal{Client} \believes \textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{Server}\]
-\item \(\textnormal{Server} \believes \fresh{\textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{Server}}\)
-\item \(\textnormal{Server} \believes \fresh{\textnormal{Client} \sharekey{K\textsubscript{mac }} \textnormal{Server}}\)
-\item \(\textnormal{Client} \believes \textnormal{Server}\believes AUTH\:OK\)
-\item \(\textnormal{Sever} \believes \textnormal{Client}\believes CMD\)
-\item \(\textnormal{Client} \believes \textnormal{Server}\believes RESP\)
+\item \(\textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}\)
+\item \(\textnormal{S} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}\)
+\item \(\textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}\)
+\item \(\textnormal{S} \believes \textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}\)
+\item \(\textnormal{C} \believes \textnormal{S} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}\)
+\item \(\textnormal{C} \believes \textnormal{S} \believes \textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}\)
+\item \(\textnormal{S} \believes \textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}\)
+\item \(\textnormal{S} \believes \textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}\)
+%\item \(\textnormal{S} \believes \fresh{\textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}}\)
+%\item \(\textnormal{S} \believes \fresh{\textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}}\)
+\item \(\textnormal{C} \believes \textnormal{S}\believes AUTH\:OK\)
+\item \(\textnormal{S} \believes \textnormal{C}\believes CMD\)
+\item \(\textnormal{C} \believes \textnormal{S}\believes RESP\)
 \end{itemize}
 
 \subsection{Idealized Protocol}
 \begin{itemize}
-\item \(\textnormal{M3: Server} \rightarrow \textnormal{Client} \: \lbrace n_c,n_s \rbrace \textsubscript{priv}\)
-\item \(\textnormal{M4: Client} \rightarrow \textnormal{Server} \: \encrypt{n_s,\textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{Server},\textnormal{Client} \sharekey{K\textsubscript{mac }} \textnormal{Server},user,passwd}{K\textsubscript{publ}}\)
-\item \(\textnormal{M5: Server} \rightarrow \textnormal{Client} \: \lbrace AUTH\:OK \rbrace \textsubscript{K\textsubscript{mac}}\)
-\item \(\textnormal{M6: Client} \rightarrow \textnormal{Server} \: \lbrace CMD,n\textsubscript{s+1} \rbrace \textsubscript{K\textsubscript{sees}}\)
-\item \(\textnormal{M7: Server} \rightarrow \textnormal{Client} \: \lbrace RESP,n\textsubscript{c+1} \rbrace \textsubscript{K\textsubscript{sess}}\)
+\item \(\textnormal{M3: S} \rightarrow \textnormal{C} \: \lbrace n_c,n_s \rbrace \textsubscript{priv}\)
+\item \(\textnormal{M4: C} \rightarrow \textnormal{S} \: \encrypt{n_s,\textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S},\textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S},user,passwd}{K\textsubscript{publ}}\)
+\item \(\textnormal{M5: S} \rightarrow \textnormal{C} \: \lbrace AUTH\:OK \rbrace \textsubscript{K\textsubscript{mac}}\)
+\item \(\textnormal{M6: C} \rightarrow \textnormal{S} \: \lbrace CMD,n\textsubscript{s+1} \rbrace \textsubscript{K\textsubscript{sees}}\)
+\item \(\textnormal{M7: S} \rightarrow \textnormal{C} \: \lbrace RESP,n\textsubscript{c+1} \rbrace \textsubscript{K\textsubscript{sess}}\)
 \end{itemize}
 
 \subsection{Proof}
@@ -94,21 +97,21 @@ By applying the Nonce Verification Rule (2nd postulate) we derive
 
 \[ \frac{\textnormal{C} \believes (n_c,n_s)}{\textnormal{C} \believes n_c, \textnormal{C} \believes n_s}\]
 So after message 3 the client knows the server nonce generated in this instance of protocol. In the message 4 the client sends the K\textsubscript{sess}, and authenticates to the Server. Client and Server have a preshared secret wich is the Password linked to Username. We apply the Message Meaning Rule (1st postulate) to M4.
-\[ \frac{\textnormal{S} \believes \textnormal{C} \secret{passw} \textnormal{S}, \textnormal{S} \sees \combine{n_s,K\textsubscript{sess},K\textsubscript{mac},Username}{passw}}{\textnormal{S}\believes \textnormal{C} \oncesaid (n_s,K\textsubscript{sess},K\textsubscript{mac},Username)} \]
+\[ \frac{\textnormal{S} \believes \textnormal{C} \secret{passw} \textnormal{S}, \textnormal{S} \sees \combine{n_s,\textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S},\textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S},Username}{passw}}{\textnormal{S}\believes \textnormal{C} \oncesaid (n_s,\textnormal{Client} \sharekey{K\textsubscript{sess }} \textnormal{S},\textnormal{Client} \sharekey{K\textsubscript{mac }} \textnormal{S},Username)} \]
 Now we apply the Nonce Verification Rule (2nd postulate) to that message.
-\[ \frac{\textnormal{S}\believes \fresh{n_s}, \textnormal{S} \believes \textnormal{C} \oncesaid (n_s,K\textsubscript{sess},K\textsubscript{mac},Username)}
-   {\textnormal{S} \believes \textnormal{C} \believes (n_s,K\textsubscript{sess},K\textsubscript{mac},Username)}	\]
+\[ \frac{\textnormal{S}\believes \fresh{n_s}, \textnormal{S} \believes \textnormal{C} \oncesaid (n_s,\textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S},\textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S},Username)}
+   {\textnormal{S} \believes \textnormal{C} \believes (n_s,\textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S},\textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S},Username)}	\]
 The Server believes that Client believes in the session key. Now we apply the Jurisdiction Rule (3rd postulate) to that message.
-\[ \frac{\textnormal{S} \believes \textnormal{C} \believes (K\textsubscript{sess},K\textsubscript{mac}), \textnormal{S} \believes \textnormal{C} \controls (K\textsubscript{sess},K\textsubscript{mac})}
-        {\textnormal{S} \believes (K\textsubscript{sess},K\textsubscript{mac}) } \]
+\[ \frac{\textnormal{S} \believes \textnormal{C} \believes (\textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S},\textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}), \textnormal{S} \believes \textnormal{C} \controls (K\textsubscript{sess},K\textsubscript{mac})}
+        {\textnormal{S} \believes (\textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S},\textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}) } \]
 Now the Server and the Client believe that session key and mac key has been generated in this execution of the protocol. We have proven that
 \begin{itemize}
 	\item \(\textnormal{S} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}\)
 	\item \(\textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}\)
 	\item \(\textnormal{S} \believes \textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}\)
 	\item \(\textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}\) 
-	\item \(\textnormal{S} \believes \fresh{\textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}}\)
-	\item \(\textnormal{S} \believes \fresh{\textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}}\)
+	\item \(\textnormal{S} \believes \textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}\)
+	\item \(\textnormal{S} \believes \textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}\)
 \end{itemize}
 Now the session keys are established. In the idealized protocol we assumed that the client typed the correct password so the message 5 is AUTHENTICATION OK. It is send in plain text but the message 5 also contains the hash-mac of the message. We can apply the message meaning rule.
 \[
