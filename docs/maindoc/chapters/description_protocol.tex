@@ -21,7 +21,7 @@ In this paragraph we will see the sequence diagram.
 	\mess{sr}{\small2) ServerHello || n\textsubscript{s}}{cl}
 	\mess{sr}{\small3) E(K\textsubscript{priv}, n\textsubscript{c} || n\textsubscript{s})}{cl}
 	\mess{cl}{\small4) E(K\textsubscript{publ}, n\textsubscript{s} || K\textsubscript{sess} || K\textsubscript{mac} || Username || Password)}{sr}
-	\mess{sr}{\small5) Authentication OK || HMAC\textsubscript{K\textsubscript{mac}}(Authentication OK)}{cl}
+	\mess{sr}{\small5) E(K\textsubscript{sess},Authent OK || n\textsubscript{c}) || HMAC\textsubscript{K\textsubscript{mac}}(E(K\textsubscript{sess},Authent OK || n\textsubscript{c}))}{cl}
 	\mess{cl}{\small6) E(K\textsubscript{sess}, Command || n\textsubscript{s+1}) || HMAC\textsubscript{K\textsubscript{mac}}(E(K\textsubscript{sess}, Command || n\textsubscript{s+1}))	}{sr}
 	\mess{sr}{\small7) E(K\textsubscript{sess}, Response || n\textsubscript{c+1}) || HMAC\textsubscript{K\textsubscript{mac}}(E(K\textsubscript{sess}, Response || n\textsubscript{c+1})}{cl}
 \end{sequencediagram}
@@ -81,11 +81,11 @@ In this paragraph we will see the sequence diagram.
 
 \subsection{Idealized Protocol}
 \begin{itemize}
-\item \(\textnormal{M3: S} \rightarrow \textnormal{C} \: \lbrace n_c,n_s \rbrace \textsubscript{priv}\)
-\item \(\textnormal{M4: C} \rightarrow \textnormal{S} \: \encrypt{n_s,\textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S},\textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S},user,passwd}{K\textsubscript{publ}}\)
-\item \(\textnormal{M5: S} \rightarrow \textnormal{C} \: \lbrace AUTH\:OK \rbrace \textsubscript{K\textsubscript{mac}}\)
-\item \(\textnormal{M6: C} \rightarrow \textnormal{S} \: \lbrace CMD,n\textsubscript{s+1} \rbrace \textsubscript{K\textsubscript{sees}}\)
-\item \(\textnormal{M7: S} \rightarrow \textnormal{C} \: \lbrace RESP,n\textsubscript{c+1} \rbrace \textsubscript{K\textsubscript{sess}}\)
+	\item \(\textnormal{M3: S} \rightarrow \textnormal{C} \: \encrypt{n_c,n_s}{K\textsubscript{priv}}\)
+	\item \(\textnormal{M4: C} \rightarrow \textnormal{S} \: \encrypt{n_s,\textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S},\textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S},user,passwd}{K\textsubscript{publ}}\)
+	\item \(\textnormal{M5: S} \rightarrow \textnormal{C} \: \encrypt{n_c,AUTH\:OK, \textnormal{C} \sharekey{K\textsubscript{sess }},\textnormal{C} \sharekey{K\textsubscript{mac }} \textnormal{S}}{K\textsubscript{sess}}\)
+	\item \(\textnormal{M6: C} \rightarrow \textnormal{S} \: \encrypt{n\textsubscript{s+1},CMD}{K\textsubscript{sees}}\)
+	\item \(\textnormal{M7: S} \rightarrow \textnormal{C} \: \encrypt{n\textsubscript{c+1},RESP}{K\textsubscript{sess}}\)
 \end{itemize}
 
 \subsection{Proof}
