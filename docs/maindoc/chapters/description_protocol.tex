@@ -126,13 +126,13 @@ We can apply the \textit{nonce verification rule}.
 	\item \(\textnormal{C} \believes \textnormal{S}\believes AUTH\:OK\)
 \end{itemize}
 It is also necessary to proof that commands have been generated in this execution of the protocol. We apply the \textit{message meaning rule} and then the \textit{nonce verification rule}.
-\[ \frac{\textnormal{S} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}, \textnormal{S} \sees \lbrace CMD, n\textsubscript{s+1} \rbrace \textsubscript{K\textsubscript{sess}} }{ \textnormal{S} \believes \textnormal{C} \oncesaid (CMD,n\textsubscript{s+1}) }\]
+\[ \frac{\textnormal{S} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}, \textnormal{S} \sees \encrypt{n\textsubscript{s+1},CMD}{K\textsubscript{sess}} }{ \textnormal{S} \believes \textnormal{C} \oncesaid (n\textsubscript{s+1,CMD}) }\]
 
-\[ \frac{ \textnormal{S} \believes \fresh{n\textsubscript{s+1}}, \textnormal{S} \believes \textnormal{C} \oncesaid (CMD,n\textsubscript{s+1}) } 
-        {\textnormal{S} \believes \textnormal{C} \believes (CMD,n\textsubscript{s+1})}\]
+\[ \frac{ \textnormal{S} \believes \fresh{n\textsubscript{s+1}}, \textnormal{S} \believes \textnormal{C} \oncesaid (n\textsubscript{s+1},CMD) } 
+        {\textnormal{S} \believes \textnormal{C} \believes (n\textsubscript{s+1},CMD)}\]
 Let's analyze the Message 7 to prove that also the Respond Message has been produced in this execution of the protocol.
 
-\[ \frac{\textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S}, \textnormal{C} \sees \lbrace RESP, n\textsubscript{c+1} \rbrace \textsubscript{K\textsubscript{sess}}}{ \textnormal{C} \believes \textnormal{S} \oncesaid (n\textsubscript{c+1},RESP)} 
+\[ \frac{\textnormal{C} \believes \textnormal{C} \sharekey{K\textsubscript{sess }} \textnormal{S},\textnormal{C} \sees \encrypt{n\textsubscript{c+1},RESP}{K\textsubscript{sess}}}{ \textnormal{C} \believes \textnormal{S} \oncesaid (n\textsubscript{c+1},RESP)} 
 \]
 
 \[ \frac{\textnormal{C} \believes \fresh{n\textsubscript{c+1}}, \textnormal{C} \believes \textnormal{S} \oncesaid (n\textsubscript{c+1},RESP) }{\textnormal{C} \believes \textnormal{S} \believes (n\textsubscript{c+1},RESP)}
