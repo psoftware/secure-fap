@@ -9,8 +9,8 @@ database.sqlite3: script.sql
 client: client.o $(COMMONLIB_OBJ)
 	g++ $(COMMON_FLAGS) client.o $(COMMONLIB_OBJ) -o client -lcrypto
 
-server: server.o $(COMMONLIB_OBJ)
-	g++ $(COMMON_FLAGS) server.o $(COMMONLIB_OBJ) -o server -lcrypto -lsqlite3
+server: server.o $(COMMONLIB_OBJ) commonlib/sqliteUtil.o
+	g++ $(COMMON_FLAGS) server.o $(COMMONLIB_OBJ)  commonlib/sqliteUtil.o -o server -lcrypto -lsqlite3
 
 client.o: client.cpp
 	g++ $(COMMON_FLAGS) -c -Wall client.cpp -o client.o
@@ -47,6 +47,9 @@ commonlib/DynamicArray.o: commonlib/DynamicArray.cpp commonlib/DynamicArray.h
 
 commonlib/net_error.o: commonlib/net_exception.cpp commonlib/net_exception.h
 	g++ $(COMMON_FLAGS) -c -g commonlib/net_exception.cpp -o commonlib/net_exception.o
+
+commonlib/sqliteUtil.o: commonlib/sqliteUtil.cpp commonlib/sqliteUtil.h
+	g++ $(COMMON_FLAGS) -c -g commonlib/sqliteUtil.cpp -o commonlib/sqliteUtil.o	
 
 clean:
 	rm -f client server *.o commonlib/*.o database.sqlite3
