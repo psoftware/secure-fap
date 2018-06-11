@@ -30,7 +30,7 @@ bool EncryptSession::read_pub_key(const char *filename)
 		return false;
 
 	fclose(file);
-		return true;
+	return true;
 }
 
 

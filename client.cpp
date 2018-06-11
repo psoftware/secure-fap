@@ -70,19 +70,23 @@ int send_hello_msg(int sock) {
 	return send_data(sock,(unsigned char*)&h, sizeof(h));
 }
 
-int analyze_message(unsigned char* buf)
+bool recv_hello_msg(int sock)
 {
-	convert_to_host_order(buf);
-	switch( ((simple_msg*)buf)->t ) {
+	if( recv_data(sock, &my_buff) < sizeof(simple_msg) )
+		return false;
+
+	convert_to_host_order(my_buff.buf);
+	simple_msg *p = (simple_msg*)my_buff.buf;
+	switch( p->t ) {
   		case SERVER_HELLO:
-  			sr_nonce = sr_seq_num = ((hello_msg*)buf)->nonce;
+  			sr_nonce = sr_seq_num = ((hello_msg*)p)->nonce;
 			LOG_DEBUG("Server nonce received: %ld\n",sr_nonce);
   			break;
 		default:
-			return -2;
+			return false;
 	}
 
-	return 0;
+	return true;
 }
 
 bool verify_server_identity(int sd)
@@ -533,17 +537,22 @@ int main(int argc, char **argv)
 	if( sd < 0 )
 		return -1;
 
-	// 1) Send Client Nuance
+	// 1) Send Client Nonce
 	send_hello_msg(sd);
 
-	// 2) Get Server Nuance
-	recv_data(sd,&my_buff);
-	analyze_message(my_buff.buf);
+	// 2) Get Server Nonce
+	if(	!recv_hello_msg(sd) )
+	{
+		printf("Hello message from server not received! \n");
+		return -1;
+	}
 
 	// 3) Verify Server Identity
 	// receive E(Kpriv, client_nonce|server_nonce)
-	if(!verify_server_identity(sd))
+	if(!verify_server_identity(sd)){
+		printf("Server verification failed \n");
 		return -1;
+	}
 
 	// 4) Send client verification infos and KeySession
 	// send {client_nonce|session key|username|password}_Kpub
